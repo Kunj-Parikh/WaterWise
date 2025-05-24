@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "773701534582",
+    "project_id": "waterwise-499e5",
+    "storage_bucket": "waterwise-499e5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:773701534582:android:8a55a18d95cc82aa573057",
+        "android_client_info": {
+          "package_name": "com.example.waterwise"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDF2INIOzkscy-2s_dgQMzGaM1VM5BECIY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
