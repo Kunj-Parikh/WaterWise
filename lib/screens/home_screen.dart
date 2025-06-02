@@ -30,6 +30,14 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   }
 
   Future<void> _getCurrentLocation() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        // Handle the case when permission is not granted
+        return;
+      }
+    }
     final LocationSettings locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
     );

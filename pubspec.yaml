@@ -32,10 +32,13 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
   google_maps: ^6.2.0
+
+  # Uncomment the following lines for Firebase
   firebase_core: ^3.13.1
   firebase_auth: ^5.5.4
   cloud_firestore: ^5.6.8
   firebase_messaging: ^15.2.6
+  
   geolocator: ^14.0.0
   geocoding: ^3.0.0
   flutter_riverpod: ^2.6.1   # For state management (or use BLoC or Provider)
