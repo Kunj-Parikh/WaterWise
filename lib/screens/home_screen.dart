@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import '../services/water_data_service.dart';
 import 'adaptive_map.dart';
+import '../widgets/menu_bar.dart';
 
 class WaterQualityHomePage extends StatefulWidget {
   const WaterQualityHomePage({super.key});
@@ -234,6 +235,10 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     return AdaptiveMap(currentPosition: _currentPosition!, markers: _markers);
   }
 
+  Widget buildMenuBar() {
+    return FilterMenuBar();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -259,8 +264,11 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             Center(child: CircularProgressIndicator())
           else
             buildMap(),
+          
         ],
+        
       ),
     );
+    
   }
 }
