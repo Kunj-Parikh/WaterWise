@@ -16,7 +16,7 @@ class WaterDataService {
         ? parameterCodes.map((code) => 'pCode=$code').join('&')
         : '';
     final url = Uri.parse(
-      '$baseUrl?$locationString&${pCodes.isNotEmpty ? '$pCodes&' : ''}mimeType=csv&dataProfile=basicPhysChem&providers=NWIS&providers=STORET',
+      '$baseUrl?$locationString&${pCodes.isNotEmpty ? '$pCodes&' : ''}mimeType=csv&dataProfile=fullPhysChem&providers=NWIS&providers=STORET',
     );
     print('Fetching data from: $url');
 

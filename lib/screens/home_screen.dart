@@ -8,6 +8,7 @@ import 'adaptive_map.dart';
 import '../widgets/menu_bar.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 
 class WaterQualityHomePage extends StatefulWidget {
   const WaterQualityHomePage({super.key});
@@ -20,9 +21,10 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     '52644': 'PFOS',
     '53590': 'PFOS',
     '54084': 'PFOS',
-    '54117': 'PFOS',
-    '54137': 'PFOS',
-    '54205': 'PFOS',
+    // '54117': 'PFOS',
+
+    // '54137': 'PFOS',
+    // '54205': 'PFOS',
     // '54206': 'PFOS',
     // '54248': 'PFOS',
     // '54280': 'PFOS',
@@ -33,13 +35,12 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     // '54784': 'PFOS',
     // '57926': 'PFOS',
     // '58010': 'PFOS',
-
     '53581': 'PFOA',
     '54083': 'PFOA',
     '54116': 'PFOA',
-    '54136': 'PFOA',
-    '54255': 'PFOA',
-    '54287': 'PFOA',
+    // '54136': 'PFOA',
+    // '54255': 'PFOA',
+    // '54287': 'PFOA',
     // '54319': 'PFOA',
     // '54651': 'PFOA',
     // '54652': 'PFOA',
@@ -67,6 +68,8 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
 
   // ignore: unused_field, prefer_final_fields
   bool _searching = false;
+
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -204,12 +207,17 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             if (locationName.isNotEmpty)
               // Use a special marker for bold, then parse in Tooltip child
               '[BOLD]Location: $locationName[/BOLD]',
-            ...visibleAtLocation.map((e) {
+            ...visibleAtLocation.take(3).map((e) {
               final code = e['USGSpcode']?.toString();
               final contaminant = parameterNames[code] ?? code ?? 'Unknown';
               final amount = e['Result_Measure']?.toString() ?? '';
               final unit = e['Result_MeasureUnit']?.toString() ?? '';
-              return 'Contaminant: $contaminant\nAmount: $amount $unit';
+              final date = e['Activity_StartDate']?.toString();
+              String dateInfo = '';
+              if (date != null && date.isNotEmpty) {
+                dateInfo += 'Date: $date';
+              }
+              return 'Contaminant: $contaminant\nAmount: $amount $unit${dateInfo.isNotEmpty ? '\n$dateInfo' : ''}';
             }),
           ].join('\n\n');
 
@@ -282,25 +290,37 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                             ),
                           ),
                         ),
-                        
+
                         // callback every time user types
                         suggestionsCallback: (pattern) async {
-                          if (pattern.trim().isEmpty) return [];
-                          final url = Uri.parse(
-                            'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&addressdetails=1&limit=10',
-                          );
-                          final response = await http.get(
-                            url,
-                            headers: {
-                              'User-Agent': 'WaterWiseApp/1.0 (your@email.com)',
+                          if (_debounce?.isActive ?? false) _debounce!.cancel();
+                          final completer =
+                              Completer<List<Map<String, dynamic>>>();
+                          _debounce = Timer(
+                            const Duration(milliseconds: 500),
+                            () async {
+                              if (pattern.trim().isEmpty) {
+                                completer.complete([]);
+                                return;
+                              }
+                              print('Callback');
+                              final url = Uri.parse(
+                                'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
+                              );
+                              print('Fetching suggestions from: $url');
+                              final response = await http.get(url);
+                              if (response.statusCode == 200) {
+                                print('Received response 200');
+                                final List data = jsonDecode(response.body);
+                                completer.complete(
+                                  data.cast<Map<String, dynamic>>(),
+                                );
+                                return;
+                              }
+                              completer.complete([]);
                             },
                           );
-                          if (response.statusCode == 200) {
-                            final List data = jsonDecode(response.body);
-                            // cast just in case we get weird format
-                            return data.cast<Map<String, dynamic>>();
-                          }
-                          return [];
+                          return completer.future;
                         },
                         itemBuilder: (context, suggestion) {
                           final display = suggestion['display_name'] ?? '';
