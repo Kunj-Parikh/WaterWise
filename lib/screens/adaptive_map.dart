@@ -16,87 +16,85 @@ class AdaptiveMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mapController = MapController();
-    return Flexible(
-      child: Stack(
-        children: [
-          FlutterMap(
-            mapController: mapController,
-            options: MapOptions(
-              initialCenter: currentPosition,
-              initialZoom: 10,
-              interactionOptions: const InteractionOptions(
-                enableMultiFingerGestureRace: true,
-              ),
+    return Stack(
+      children: [
+        FlutterMap(
+          mapController: mapController,
+          options: MapOptions(
+            initialCenter: currentPosition,
+            initialZoom: 10,
+            interactionOptions: const InteractionOptions(
+              enableMultiFingerGestureRace: true,
             ),
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.example.waterwise',
+              tileProvider: CancellableNetworkTileProvider(),
+            ),
+            MarkerLayer(markers: markers),
+          ],
+        ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.example.waterwise',
-                tileProvider: CancellableNetworkTileProvider(),
+              FloatingActionButton(
+                heroTag: 'zoom_in',
+                mini: true,
+                backgroundColor: Colors.white,
+                child: Icon(Icons.add, color: Colors.teal),
+                onPressed: () {
+                  mapController.move(
+                    mapController.camera.center,
+                    mapController.camera.zoom + 1,
+                  );
+                },
               ),
-              MarkerLayer(markers: markers),
+              SizedBox(height: 8),
+              FloatingActionButton(
+                heroTag: 'zoom_out',
+                mini: true,
+                backgroundColor: Colors.white,
+                child: Icon(Icons.remove, color: Colors.teal),
+                onPressed: () {
+                  mapController.move(
+                    mapController.camera.center,
+                    mapController.camera.zoom - 1,
+                  );
+                },
+              ),
+              SizedBox(height: 8),
+              FloatingActionButton(
+                heroTag: 'fit_bounds',
+                mini: true,
+                backgroundColor: Colors.white,
+                child: Icon(Icons.fit_screen, color: Colors.teal),
+                onPressed: () {
+                  if (markers.isNotEmpty) {
+                    var bounds = LatLngBounds(
+                      markers.first.point,
+                      markers.first.point,
+                    );
+                    for (final marker in markers) {
+                      bounds.extend(marker.point);
+                    }
+                    mapController.fitCamera(
+                      CameraFit.bounds(
+                        bounds: bounds,
+                        padding: const EdgeInsets.all(32),
+                      ),
+                    );
+                  }
+                },
+              ),
             ],
           ),
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FloatingActionButton(
-                  heroTag: 'zoom_in',
-                  mini: true,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.add, color: Colors.teal),
-                  onPressed: () {
-                    mapController.move(
-                      mapController.camera.center,
-                      mapController.camera.zoom + 1,
-                    );
-                  },
-                ),
-                SizedBox(height: 8),
-                FloatingActionButton(
-                  heroTag: 'zoom_out',
-                  mini: true,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.remove, color: Colors.teal),
-                  onPressed: () {
-                    mapController.move(
-                      mapController.camera.center,
-                      mapController.camera.zoom - 1,
-                    );
-                  },
-                ),
-                SizedBox(height: 8),
-                FloatingActionButton(
-                  heroTag: 'fit_bounds',
-                  mini: true,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.fit_screen, color: Colors.teal),
-                  onPressed: () {
-                    if (markers.isNotEmpty) {
-                      var bounds = LatLngBounds(
-                        markers.first.point,
-                        markers.first.point,
-                      );
-                      for (final marker in markers) {
-                        bounds.extend(marker.point);
-                      }
-                      mapController.fitCamera(
-                        CameraFit.bounds(
-                          bounds: bounds,
-                          padding: const EdgeInsets.all(32),
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
