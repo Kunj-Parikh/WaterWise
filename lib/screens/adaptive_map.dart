@@ -6,11 +6,13 @@ import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_ti
 class AdaptiveMap extends StatelessWidget {
   final LatLng currentPosition;
   final List<Marker> markers;
+  final void Function(LatLng newCenter)? onMapMoved;
 
   const AdaptiveMap({
     super.key,
     required this.currentPosition,
     required this.markers,
+    this.onMapMoved,
   });
 
   @override
@@ -23,6 +25,13 @@ class AdaptiveMap extends StatelessWidget {
           options: MapOptions(
             initialCenter: currentPosition,
             initialZoom: 10,
+
+            // tracking the user's position
+            onPositionChanged: (MapPosition position, bool hasGesture) {
+              if (hasGesture && onMapMoved != null && position.center != null) {
+                onMapMoved!(position.center!);
+              }
+            },
             interactionOptions: const InteractionOptions(
               enableMultiFingerGestureRace: true,
             ),

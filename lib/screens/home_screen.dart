@@ -56,6 +56,8 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   };
   bool loading = false;
   LatLng? _currentPosition;
+  LatLng? _newPosition;
+
   List<Marker> _markers = [];
   List<dynamic> results = [];
 
@@ -107,11 +109,15 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   }
 
   Future<void> fetchLocations() async {
-    if (_currentPosition == null) return;
+    final target = _newPosition ?? _currentPosition;
+    
+    if (target == null) return;
+    
     setState(() => loading = true);
+
     final data = await WaterDataService.fetchLocations(
-      _currentPosition!.latitude,
-      _currentPosition!.longitude,
+      target.latitude,
+      target.longitude,
       radiusMiles: 10,
       parameterCodes: parameterNames.keys.toList(),
     );
@@ -172,6 +178,11 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           child: Icon(Icons.location_on, color: Colors.red, size: 36),
         ),
         ...closest.map<Marker?>((item) {
+          Color _getMarkerColor(double value) {
+            if (value < 1) return Colors.green;
+            if (value < 10) return Colors.orange;
+            return Colors.red;
+          }
           double lat =
               _parseDouble(item['Location_LatitudeStandardized']) ??
               _parseDouble(item['Location_Latitude'])!;
@@ -202,7 +213,12 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             final censor = e['DetectionLimit_TypeA']?.toString().toLowerCase();
             return (det != 'not detected' && censor != 'censoring level');
           }).toList();
+
+          final firstVisible = visibleAtLocation.isNotEmpty ? visibleAtLocation.first : null;
+          final amount = double.tryParse(firstVisible?['Result_Measure']?.toString() ?? '') ?? 0;
+
           final locationName = item['Location_Name']?.toString() ?? '';
+
           final info = [
             if (locationName.isNotEmpty)
               // Use a special marker for bold, then parse in Tooltip child
@@ -232,12 +248,22 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             height: 40,
             child: _CustomTooltip(
               info: info,
-              child: Icon(Icons.location_on, color: Colors.teal, size: 36),
+              child: Icon(
+                Icons.location_on,
+                color: _getMarkerColor(amount),
+                size: 36,
+              )
             ),
           );
         }).whereType<Marker>(),
       ];
       loading = false;
+    });
+  }
+
+  void _updateMapCenter(LatLng center) {
+    setState(() {
+      _newPosition = center;
     });
   }
 
@@ -255,7 +281,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     if (_currentPosition == null) {
       return Center(child: CircularProgressIndicator());
     }
-    return AdaptiveMap(currentPosition: _currentPosition!, markers: _markers);
+    return AdaptiveMap(currentPosition: _newPosition ?? _currentPosition!, markers: _markers, onMapMoved: _updateMapCenter);
   }
 
   // TODO: Kunj's manu bar
@@ -348,7 +374,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                     ),
                     SizedBox(width: 8),
                     ElevatedButton(
-                      onPressed: _getCurrentLocation,
+                      onPressed: fetchLocations,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
