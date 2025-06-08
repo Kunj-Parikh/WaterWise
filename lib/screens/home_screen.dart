@@ -433,6 +433,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                 ],
               ),
             ),
+          buildMenuBar()
         ],
       ),
     );
