@@ -286,7 +286,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
 
   // TODO: Kunj's manu bar
   Widget buildMenuBar() {
-    return FilterMenuBar();
+    return DropDown();
   }
 
   @override
@@ -409,6 +409,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                   ),
                   child: Text('Refresh Water Data Nearby'),
                 ),
+                Row(children: [Text('View specific contamination amounts: '), buildMenuBar()]),
               ],
             ),
           ),
@@ -433,7 +434,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                 ],
               ),
             ),
-          buildMenuBar()
+          // buildMenuBar()
         ],
       ),
     );
