@@ -9,6 +9,13 @@ import '../widgets/menu_bar.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import '../widgets/contaminant_sparkline.dart';
+import '../widgets/location_summary_card.dart';
+import '../widgets/alert_badge.dart';
+import '../widgets/contaminant_heatmap.dart';
+import 'comparison_dashboard.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 
 class WaterQualityHomePage extends StatefulWidget {
   const WaterQualityHomePage({super.key});
@@ -60,6 +67,9 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
 
   List<Marker> _markers = [];
   List<dynamic> results = [];
+  Map<String, dynamic>? _selectedLocation;
+  bool _showSidebar = false;
+  bool _showHeatmap = false;
 
   // ignore: unused_field, prefer_final_fields
   String _searchQuery = '';
@@ -110,9 +120,9 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
 
   Future<void> fetchLocations() async {
     final target = _newPosition ?? _currentPosition;
-    
+
     if (target == null) return;
-    
+
     setState(() => loading = true);
 
     final data = await WaterDataService.fetchLocations(
@@ -178,17 +188,14 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           child: Icon(Icons.location_on, color: Colors.red, size: 36),
         ),
         ...closest.map<Marker?>((item) {
-          Color _getMarkerColor(double value) {
+          Color getMarkerColor(double value) {
             if (value < 1) return Colors.green;
             if (value < 10) return Colors.orange;
             return Colors.red;
           }
-          double lat =
-              _parseDouble(item['Location_LatitudeStandardized']) ??
-              _parseDouble(item['Location_Latitude'])!;
-          double lng =
-              _parseDouble(item['Location_LongitudeStandardized']) ??
-              _parseDouble(item['Location_Longitude'])!;
+
+          double lat = _parseDouble(item['Location_Latitude'])!;
+          double lng = _parseDouble(item['Location_Longitude'])!;
 
           final detectionCondition = item['Result_ResultDetectionCondition']
               ?.toString()
@@ -214,8 +221,14 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             return (det != 'not detected' && censor != 'censoring level');
           }).toList();
 
-          final firstVisible = visibleAtLocation.isNotEmpty ? visibleAtLocation.first : null;
-          final amount = double.tryParse(firstVisible?['Result_Measure']?.toString() ?? '') ?? 0;
+          final firstVisible = visibleAtLocation.isNotEmpty
+              ? visibleAtLocation.first
+              : null;
+          final amount =
+              double.tryParse(
+                firstVisible?['Result_Measure']?.toString() ?? '',
+              ) ??
+              0;
 
           final locationName = item['Location_Name']?.toString() ?? '';
 
@@ -246,13 +259,27 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             point: LatLng(lat, lng),
             width: 40,
             height: 40,
-            child: _CustomTooltip(
-              info: info,
-              child: Icon(
-                Icons.location_on,
-                color: _getMarkerColor(amount),
-                size: 36,
-              )
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                child: _CustomTooltip(
+                  info: info,
+                  onTap: () {
+                    print(
+                      'Marker tapped: ${item['Location_Name']?.toString() ?? ''}',
+                    );
+                    setState(() {
+                      _selectedLocation = item;
+                      _showSidebar = true;
+                    });
+                  },
+                  child: Icon(
+                    Icons.location_on,
+                    color: getMarkerColor(amount),
+                    size: 36,
+                  ),
+                ),
+              ),
             ),
           );
         }).whereType<Marker>(),
@@ -281,7 +308,276 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     if (_currentPosition == null) {
       return Center(child: CircularProgressIndicator());
     }
-    return AdaptiveMap(currentPosition: _newPosition ?? _currentPosition!, markers: _markers, onMapMoved: _updateMapCenter);
+    // Use kIsWeb to avoid Platform on web
+    final isDesktop =
+        !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+    if (isDesktop) {
+      return Row(
+        children: [
+          Expanded(
+            flex: _showSidebar && _selectedLocation != null
+                ? 3
+                : 2, // decrease map width when sidebar is open
+            child: Stack(
+              children: [
+                AdaptiveMap(
+                  currentPosition: _newPosition ?? _currentPosition!,
+                  markers: _markers,
+                  onMapMoved: _updateMapCenter,
+                ),
+                // Floating action button for dashboard
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: FloatingActionButton.extended(
+                    heroTag: 'dashboard',
+                    backgroundColor: Colors.teal,
+                    icon: Icon(Icons.dashboard),
+                    label: Text('Compare'),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => ComparisonDashboard(
+                            contaminantTrends: _buildTrends(),
+                            dates: _buildDates(),
+                            colors: [
+                              Colors.teal,
+                              Colors.orange,
+                              Colors.red,
+                              Colors.blue,
+                            ],
+                            contaminants: parameterNames.values
+                                .toSet()
+                                .toList(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Positioned(
+                  top: 80,
+                  right: 16,
+                  child: FloatingActionButton.extended(
+                    heroTag: 'heatmap',
+                    backgroundColor: Colors.deepOrange,
+                    icon: Icon(Icons.thermostat),
+                    label: Text('Heatmap'),
+                    onPressed: () {
+                      setState(() {
+                        _showSidebar = false;
+                        _selectedLocation = null;
+                        _showHeatmap = !_showHeatmap;
+                      });
+                    },
+                  ),
+                ),
+                if (_showHeatmap)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: ContaminantHeatmap(
+                        points: _buildHeatmapPoints(),
+                        values: _buildHeatmapValues(),
+                        color: Colors.deepOrange,
+                        maxRadius: 60,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (_showSidebar && _selectedLocation != null)
+            Container(
+              width: 480, // wider sidebar
+              color: Colors.white,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.close),
+                      onPressed: () {
+                        setState(() {
+                          _showSidebar = false;
+                        });
+                      },
+                    ),
+                    LocationSummaryCard(
+                      locationName: _selectedLocation?['Location_Name'] ?? '',
+                      locationType:
+                          _selectedLocation?['MonitoringLocationTypeName'] ??
+                          '',
+                      state: _selectedLocation?['StateCode'] ?? '',
+                      contaminantValues: _buildContaminantValues(
+                        _selectedLocation,
+                      ),
+                      contaminantColors: _contaminantColors(),
+                    ),
+                    if (_buildSparklines(_selectedLocation).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.vertical,
+                          child: Column(
+                            children: _buildSparklines(_selectedLocation)
+                                .map(
+                                  (w) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 4.0,
+                                    ),
+                                    child: w,
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                    if (_hasAlert(_selectedLocation))
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: AlertBadge(
+                          show: true,
+                          label: 'High Contaminant!',
+                          color: Colors.red,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      );
+    }
+    // Mobile/web: overlay sidebar
+    return Stack(
+      children: [
+        AdaptiveMap(
+          currentPosition: _newPosition ?? _currentPosition!,
+          markers: _markers,
+          onMapMoved: _updateMapCenter,
+        ),
+        Positioned(
+          top: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            heroTag: 'dashboard',
+            backgroundColor: Colors.teal,
+            icon: Icon(Icons.dashboard),
+            label: Text('Compare'),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ComparisonDashboard(
+                    contaminantTrends: _buildTrends(),
+                    dates: _buildDates(),
+                    colors: [
+                      Colors.teal,
+                      Colors.orange,
+                      Colors.red,
+                      Colors.blue,
+                    ],
+                    contaminants: parameterNames.values.toSet().toList(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Positioned(
+          top: 80,
+          right: 16,
+          child: FloatingActionButton.extended(
+            heroTag: 'heatmap',
+            backgroundColor: Colors.deepOrange,
+            icon: Icon(Icons.thermostat),
+            label: Text('Heatmap'),
+            onPressed: () {
+              setState(() {
+                _showSidebar = false;
+                _selectedLocation = null;
+                _showHeatmap = !_showHeatmap;
+              });
+            },
+          ),
+        ),
+        if (_showSidebar && _selectedLocation != null)
+          Positioned(
+            top: 0,
+            right: 0,
+            bottom: 0,
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 300),
+              width: 350,
+              color: Colors.white,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.close),
+                      onPressed: () {
+                        setState(() {
+                          _showSidebar = false;
+                        });
+                      },
+                    ),
+                    LocationSummaryCard(
+                      locationName: _selectedLocation?['Location_Name'] ?? '',
+                      locationType:
+                          _selectedLocation?['MonitoringLocationTypeName'] ??
+                          '',
+                      state: _selectedLocation?['StateCode'] ?? '',
+                      contaminantValues: _buildContaminantValues(
+                        _selectedLocation,
+                      ),
+                      contaminantColors: _contaminantColors(),
+                    ),
+                    if (_buildSparklines(_selectedLocation).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.vertical,
+                          child: Column(
+                            children: _buildSparklines(_selectedLocation)
+                                .map(
+                                  (w) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 4.0,
+                                    ),
+                                    child: w,
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ),
+                    if (_hasAlert(_selectedLocation))
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: AlertBadge(
+                          show: true,
+                          label: 'High Contaminant!',
+                          color: Colors.red,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        if (_showHeatmap)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: ContaminantHeatmap(
+                points: _buildHeatmapPoints(),
+                values: _buildHeatmapValues(),
+                color: Colors.deepOrange,
+                maxRadius: 60,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   // TODO: Kunj's manu bar
@@ -434,17 +730,197 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                 ],
               ),
             ),
-          // buildMenuBar()
+          // buildMenuBar(),
         ],
       ),
     );
+  }
+
+  // Helper methods for dashboard, sparklines, heatmap, etc.
+  Map<String, List<double>> _buildTrends() {
+    // Example: build time series for each contaminant (mocked for now)
+    final Map<String, List<double>> trends = {};
+    for (var code in parameterNames.keys) {
+      trends[parameterNames[code] ?? code] = List.generate(
+        10,
+        (i) => (i + 1) * 2.0,
+      );
+    }
+    return trends;
+  }
+
+  List<DateTime> _buildDates() {
+    // Example: 10 days
+    return List.generate(
+      10,
+      (i) => DateTime.now().subtract(Duration(days: 10 - i)),
+    );
+  }
+
+  Map<String, double> _buildContaminantValues(Map<String, dynamic>? location) {
+    if (location == null) return {};
+    // Find all contaminant results for this location (by Location_Identifier)
+    final locationId = location['Location_Identifier']?.toString();
+    final allResults = results
+        .where(
+          (item) =>
+              item['Location_Identifier']?.toString() == locationId &&
+              item['Result_Measure'] != null &&
+              item['USGSpcode'] != null,
+        )
+        .toList();
+    // For each contaminant, get the most recent value
+    final Map<String, double> values = {};
+    final Map<String, List<Map<String, dynamic>>> byContaminant = {};
+    for (final item in allResults) {
+      final code = item['USGSpcode']?.toString();
+      if (code == null) continue;
+      byContaminant.putIfAbsent(code, () => []).add(item);
+    }
+    byContaminant.forEach((code, group) {
+      // Sort by date descending
+      group.sort((a, b) {
+        final aDate =
+            DateTime.tryParse(a['Activity_StartDate'] ?? '') ?? DateTime(1970);
+        final bDate =
+            DateTime.tryParse(b['Activity_StartDate'] ?? '') ?? DateTime(1970);
+        return bDate.compareTo(aDate);
+      });
+      final name = parameterNames[code] ?? code;
+      final value = double.tryParse(
+        group.first['Result_Measure']?.toString() ?? '',
+      );
+      if (value != null) values[name] = value;
+    });
+    return values;
+  }
+
+  Map<String, Color> _contaminantColors() {
+    return {
+      'PFOS': Colors.teal,
+      'PFOA': Colors.orange,
+      'Lead': Colors.red,
+      'Nitrogen': Colors.blue,
+      'Phosphorus': Colors.green,
+    };
+  }
+
+  List<Widget> _buildSparklines(Map<String, dynamic>? location) {
+    if (location == null) return [];
+    // Find all contaminant results for this location (by Location_Identifier)
+    final locationId = location['Location_Identifier']?.toString();
+    final allResults = results
+        .where(
+          (item) =>
+              item['Location_Identifier']?.toString() == locationId &&
+              item['Result_Measure'] != null &&
+              item['USGSpcode'] != null,
+        )
+        .toList();
+    // Group by contaminant code
+    final Map<String, List<Map<String, dynamic>>> byContaminant = {};
+    for (final item in allResults) {
+      final code = item['USGSpcode']?.toString();
+      if (code == null) continue;
+      byContaminant.putIfAbsent(code, () => []).add(item);
+    }
+    final List<Widget> sparklines = [];
+    for (final code in byContaminant.keys) {
+      final name = parameterNames[code] ?? code;
+      final group = byContaminant[code]!;
+      // Sort by date
+      group.sort((a, b) {
+        final aDate =
+            DateTime.tryParse(a['Activity_StartDate'] ?? '') ?? DateTime(1970);
+        final bDate =
+            DateTime.tryParse(b['Activity_StartDate'] ?? '') ?? DateTime(1970);
+        return aDate.compareTo(bDate);
+      });
+      final values = group
+          .map(
+            (e) =>
+                double.tryParse(e['Result_Measure']?.toString() ?? '') ?? 0.0,
+          )
+          .toList();
+      final dates = group
+          .map(
+            (e) =>
+                DateTime.tryParse(e['Activity_StartDate'] ?? '') ??
+                DateTime(1970),
+          )
+          .toList();
+      if (values.isEmpty) continue;
+      sparklines.add(
+        ContaminantSparkline(
+          values: values,
+          dates: dates,
+          color: _contaminantColors()[name] ?? Colors.teal,
+          label: name,
+          latestValue: values.last,
+        ),
+      );
+    }
+    if (sparklines.isEmpty) {
+      return [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text('No contaminant data available for this location.'),
+        ),
+      ];
+    }
+    return sparklines;
+  }
+
+  bool _hasAlert(Map<String, dynamic>? location) {
+    if (location == null) return false;
+    // Example: alert if any value > 10
+    for (var code in parameterNames.keys) {
+      final val = double.tryParse(location[code]?.toString() ?? '');
+      if (val != null && val > 10) return true;
+    }
+    return false;
+  }
+
+  List<LatLng> _buildHeatmapPoints() {
+    // Build a list of (LatLng, value) pairs where both are valid
+    final pairs = results
+        .map((item) {
+          final lat = _parseDouble(item['Location_Latitude']);
+          final lng = _parseDouble(item['Location_Longitude']);
+          final val = double.tryParse(item['Result_Measure']?.toString() ?? '');
+          if (lat != null && lng != null && val != null) {
+            return {'point': LatLng(lat, lng), 'value': val};
+          }
+          return null;
+        })
+        .whereType<Map<String, dynamic>>()
+        .toList();
+    return pairs.map((e) => e['point'] as LatLng).toList();
+  }
+
+  List<double> _buildHeatmapValues() {
+    // Ensure values list matches points list length
+    final pairs = results
+        .map((item) {
+          final lat = _parseDouble(item['Location_Latitude']);
+          final lng = _parseDouble(item['Location_Longitude']);
+          final val = double.tryParse(item['Result_Measure']?.toString() ?? '');
+          if (lat != null && lng != null && val != null) {
+            return {'point': LatLng(lat, lng), 'value': val};
+          }
+          return null;
+        })
+        .whereType<Map<String, dynamic>>()
+        .toList();
+    return pairs.map((e) => e['value'] as double).toList();
   }
 }
 
 class _CustomTooltip extends StatefulWidget {
   final String info;
   final Widget child;
-  const _CustomTooltip({required this.info, required this.child});
+  final VoidCallback? onTap;
+  const _CustomTooltip({required this.info, required this.child, this.onTap});
 
   @override
   State<_CustomTooltip> createState() => _CustomTooltipState();
@@ -520,18 +996,22 @@ class _CustomTooltipState extends State<_CustomTooltip> {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (details) {
-          showDialog(
-            context: context,
-            builder: (ctx) {
-              return AlertDialog(
-                content: _buildRichContent(),
-                contentPadding: EdgeInsets.all(12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              );
-            },
-          );
+          if (widget.onTap != null) {
+            widget.onTap!();
+          } else {
+            showDialog(
+              context: context,
+              builder: (ctx) {
+                return AlertDialog(
+                  content: _buildRichContent(),
+                  contentPadding: EdgeInsets.all(12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
+              },
+            );
+          }
         },
         child: widget.child,
       ),
