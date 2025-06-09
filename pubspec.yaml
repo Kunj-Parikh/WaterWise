@@ -51,6 +51,7 @@ dependencies:
 
   csv2json: ^0.0.3
   flutter_typeahead: ^5.2.0
+  flutter_map_heatmap: ^0.0.7
 
 
 dev_dependencies:
