@@ -185,7 +185,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           point: _currentPosition!,
           width: 40,
           height: 40,
-          child: Icon(Icons.location_on, color: Colors.red, size: 36),
+          child: Icon(Icons.location_on, color: Colors.black, size: 36),
         ),
         ...closest.map<Marker?>((item) {
           Color getMarkerColor(double value) {
