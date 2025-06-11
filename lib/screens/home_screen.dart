@@ -68,7 +68,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   LatLng? _newPosition;
 
   List<String> contaminantList = <String>['PFOA', 'PFOS', 'Nitrates', 'Phosphates', 'Lead'];
-  List<double> contaminantLimits = <double>[10.0, 10.0, 10000000.0, 100.0, 5000.0]; // ppt
+  List<double> contaminantLimits = <double>[10.0, 10.0, 10_000_000.0, 100.0, 5_000.0]; // ppt
   List<Marker> _markers = [];
   List<dynamic> results = [];
   Map<String, dynamic>? _selectedLocation;
@@ -99,11 +99,17 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     super.dispose();
   }
 
-  double getContaminationIndex(double PFA, double PFOA, double nitrates, double phosphates, double lead) {
-    // normalize all the values to a linear scale
-    
-    return (PFA * 0.4 + PFOA * 0.3 + nitrates * 0.2 + phosphates * 0.05 + lead * 0.05);
-    
+  // universal contamination index (uci)
+  double getUCI(double PFOA, double PFOS, double nitrates, double phosphates, double lead) {
+    // normalize all the values to a linear scale, between 0 and the limit for that contaminant
+    double normalizedPFOA = (PFOA.clamp(0, 2*contaminantLimits[0]))/2*contaminantLimits[0];
+    double normalizedPFOS = (PFOS.clamp(0, 2*contaminantLimits[1]))/2*contaminantLimits[1];
+    double normalizedNitrates = (nitrates.clamp(0, 2*contaminantLimits[2]))/2*contaminantLimits[2];
+    double normalizedPhosphates = (phosphates.clamp(0, 2*contaminantLimits[3]))/2*contaminantLimits[3];
+    double normalizedLead = (lead.clamp(0, 2*contaminantLimits[4]))/2*contaminantLimits[4];
+
+    double UCI = (normalizedPFOA + normalizedPFOS + normalizedNitrates + normalizedPhosphates + normalizedLead) / 5;
+    return UCI;
   }
 
   Future<void> _getCurrentLocation() async {
