@@ -1,3 +1,5 @@
+// import 'dart:nativewrappers/_internal/vm/lib/ffi_native_type_patch.dart';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -65,6 +67,8 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   LatLng? _currentPosition;
   LatLng? _newPosition;
 
+  List<String> contaminantList = <String>['PFOA', 'PFOS', 'Nitrates', 'Phosphates', 'Lead'];
+  List<double> contaminantLimits = <double>[10.0, 10.0, 10_000_000.0, 100.0, 5_000.0]; // ppt
   List<Marker> _markers = [];
   List<dynamic> results = [];
   Map<String, dynamic>? _selectedLocation;
@@ -93,6 +97,19 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  // universal contamination index (uci)
+  double getUCI(double PFOA, double PFOS, double nitrates, double phosphates, double lead) {
+    // normalize all the values to a linear scale, between 0 and the limit for that contaminant
+    double normalizedPFOA = (PFOA.clamp(0, 2*contaminantLimits[0]))/2*contaminantLimits[0];
+    double normalizedPFOS = (PFOS.clamp(0, 2*contaminantLimits[1]))/2*contaminantLimits[1];
+    double normalizedNitrates = (nitrates.clamp(0, 2*contaminantLimits[2]))/2*contaminantLimits[2];
+    double normalizedPhosphates = (phosphates.clamp(0, 2*contaminantLimits[3]))/2*contaminantLimits[3];
+    double normalizedLead = (lead.clamp(0, 2*contaminantLimits[4]))/2*contaminantLimits[4];
+
+    double UCI = (normalizedPFOA + normalizedPFOS + normalizedNitrates + normalizedPhosphates + normalizedLead) / 5;
+    return UCI;
   }
 
   Future<void> _getCurrentLocation() async {
@@ -299,6 +316,8 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     }
     return null;
   }
+
+  
 
   Widget buildMap() {
     if (_currentPosition == null) {
