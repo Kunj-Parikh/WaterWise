@@ -1,3 +1,5 @@
+// import 'dart:nativewrappers/_internal/vm/lib/ffi_native_type_patch.dart';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
@@ -65,6 +67,8 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   LatLng? _currentPosition;
   LatLng? _newPosition;
 
+  List<String> contaminantList = <String>['PFOA', 'PFOS', 'Nitrates', 'Phosphates', 'Lead'];
+  List<double> contaminantLimits = <double>[10.0, 10.0, 10000000.0, 100.0, 5000.0]; // ppt
   List<Marker> _markers = [];
   List<dynamic> results = [];
   Map<String, dynamic>? _selectedLocation;
@@ -93,6 +97,13 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  double getContaminationIndex(double PFA, double PFOA, double nitrates, double phosphates, double lead) {
+    // normalize all the values to a linear scale
+    
+    return (PFA * 0.4 + PFOA * 0.3 + nitrates * 0.2 + phosphates * 0.05 + lead * 0.05);
+    
   }
 
   Future<void> _getCurrentLocation() async {
@@ -303,6 +314,8 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     }
     return null;
   }
+
+  
 
   Widget buildMap() {
     if (_currentPosition == null) {

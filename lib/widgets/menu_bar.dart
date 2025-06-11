@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-List<String> contaminants = <String>['Every Contaminant', 'PFAs', 'PFAOs', 'Nitrogen', 'Phosphorus', 'Lead'];
+List<String> contaminants = <String>['Every Contaminant', 'PFOA', 'PFOS', 'Nitrates', 'Phosphates', 'Lead'];
 
 class _DropDownState extends State<DropDown> {
   String valueSelected = contaminants.first;
