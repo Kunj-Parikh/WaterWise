@@ -7,12 +7,14 @@ class AdaptiveMap extends StatelessWidget {
   final LatLng currentPosition;
   final List<Marker> markers;
   final void Function(LatLng newCenter)? onMapMoved;
+  final List<Widget>? extraLayers;
 
   const AdaptiveMap({
     super.key,
     required this.currentPosition,
     required this.markers,
     this.onMapMoved,
+    this.extraLayers,
   });
 
   @override
@@ -43,6 +45,7 @@ class AdaptiveMap extends StatelessWidget {
               tileProvider: CancellableNetworkTileProvider(),
             ),
             MarkerLayer(markers: markers),
+            if (extraLayers != null) ...extraLayers!,
           ],
         ),
         Positioned(
