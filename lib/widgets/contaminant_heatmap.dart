@@ -19,6 +19,10 @@ class ContaminantHeatmap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (points.isEmpty || values.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     print('widget values: $values');
     final maxValue = values.isNotEmpty
         ? values.reduce((a, b) => a > b ? a : b)
@@ -26,7 +30,7 @@ class ContaminantHeatmap extends StatelessWidget {
     print('max value: $maxValue');
     for (int i = 0; i < points.length && i < values.length; i++) {
       print(
-        'Point ${i}: ${points[i]}, Value: ${values[i]}, Normalized: ${values[i] / (maxValue == 0 ? 1.0 : maxValue)}',
+        'Point $i: ${points[i]}, Value: ${values[i]}, Normalized: ${values[i] / (maxValue == 0 ? 1.0 : maxValue)}',
       );
     }
     print('points length: ${points.length}, values length: ${values.length}');

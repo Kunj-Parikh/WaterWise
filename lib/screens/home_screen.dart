@@ -331,6 +331,9 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             child: Stack(
               children: [
                 AdaptiveMap(
+                  key: ValueKey(
+                    _newPosition ?? _currentPosition,
+                  ), // Use _newPosition for key
                   currentPosition: _newPosition ?? _currentPosition!,
                   markers: _markers,
                   onMapMoved: _updateMapCenter,
@@ -452,6 +455,9 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     return Stack(
       children: [
         AdaptiveMap(
+          key: ValueKey(
+            _newPosition ?? _currentPosition,
+          ), // Use _newPosition for key
           currentPosition: _newPosition ?? _currentPosition!,
           markers: _markers,
           onMapMoved: _updateMapCenter,
@@ -646,6 +652,10 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                           if (lat != null && lon != null) {
                             setState(() {
                               _currentPosition = LatLng(lat, lon);
+                              _newPosition = LatLng(
+                                lat,
+                                lon,
+                              ); // Ensure map recenters
                             });
                             fetchLocations();
                           }
@@ -660,7 +670,35 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                     ),
                     SizedBox(width: 8),
                     ElevatedButton(
-                      onPressed: fetchLocations,
+                      onPressed: () async {
+                        LocationPermission permission =
+                            await Geolocator.checkPermission();
+                        if (permission == LocationPermission.denied ||
+                            permission == LocationPermission.deniedForever) {
+                          permission = await Geolocator.requestPermission();
+                          if (permission == LocationPermission.denied ||
+                              permission == LocationPermission.deniedForever) {
+                            return;
+                          }
+                        }
+                        final LocationSettings locationSettings =
+                            LocationSettings(accuracy: LocationAccuracy.high);
+                        Position position = await Geolocator.getCurrentPosition(
+                          locationSettings: locationSettings,
+                        );
+                        final userLatLng = LatLng(
+                          position.latitude,
+                          position.longitude,
+                        );
+                        setState(() {
+                          _currentPosition = userLatLng;
+                          _newPosition = userLatLng;
+                        });
+                        await fetchLocations();
+                        setState(() {
+                          // This will trigger a rebuild of AdaptiveMap with a new ValueKey
+                        });
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
                         foregroundColor: Colors.white,
@@ -711,27 +749,14 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
               child: Stack(
                 children: [
                   buildMap(),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: FloatingActionButton(
-                      heroTag: 'my_location',
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      onPressed: _getCurrentLocation,
-                      child: Icon(Icons.my_location),
-                    ),
-                  ),
                 ],
               ),
             ),
-          // buildMenuBar(),
         ],
       ),
     );
   }
 
-  // Helper methods for dashboard, sparklines, heatmap, etc.
   Map<String, List<double>> _buildTrends() {
     // Example: build time series for each contaminant (mocked for now)
     final Map<String, List<double>> trends = {};
