@@ -311,19 +311,30 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     // Use kIsWeb to avoid Platform on web
     final isDesktop =
         !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+    final heatmapPoints = _buildHeatmapPoints();
+    final heatmapValues = _buildHeatmapValues(heatmapPoints);
+    final List<Widget> heatmapLayer = _showHeatmap
+        ? [
+            ContaminantHeatmap(
+              points: heatmapPoints,
+              values: heatmapValues,
+              color: Colors.deepOrange,
+              maxRadius: 100,
+            ),
+          ]
+        : [];
     if (isDesktop) {
       return Row(
         children: [
           Expanded(
-            flex: _showSidebar && _selectedLocation != null
-                ? 3
-                : 2, // decrease map width when sidebar is open
+            flex: _showSidebar && _selectedLocation != null ? 3 : 2,
             child: Stack(
               children: [
                 AdaptiveMap(
                   currentPosition: _newPosition ?? _currentPosition!,
                   markers: _markers,
                   onMapMoved: _updateMapCenter,
+                  extraLayers: heatmapLayer,
                 ),
                 // Floating action button for dashboard
                 Positioned(
@@ -372,17 +383,6 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                     },
                   ),
                 ),
-                if (_showHeatmap)
-                  Positioned.fill(
-                    child: IgnorePointer(
-                      child: ContaminantHeatmap(
-                        points: _buildHeatmapPoints(),
-                        values: _buildHeatmapValues(),
-                        color: Colors.deepOrange,
-                        maxRadius: 60,
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -455,6 +455,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           currentPosition: _newPosition ?? _currentPosition!,
           markers: _markers,
           onMapMoved: _updateMapCenter,
+          extraLayers: heatmapLayer,
         ),
         Positioned(
           top: 16,
@@ -562,17 +563,6 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                       ),
                   ],
                 ),
-              ),
-            ),
-          ),
-        if (_showHeatmap)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: ContaminantHeatmap(
-                points: _buildHeatmapPoints(),
-                values: _buildHeatmapValues(),
-                color: Colors.deepOrange,
-                maxRadius: 60,
               ),
             ),
           ),
@@ -705,7 +695,12 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                   ),
                   child: Text('Refresh Water Data Nearby'),
                 ),
-                Row(children: [Text('View specific contamination amounts: '), buildMenuBar()]),
+                Row(
+                  children: [
+                    Text('View specific contamination amounts: '),
+                    buildMenuBar(),
+                  ],
+                ),
               ],
             ),
           ),
@@ -881,38 +876,47 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     return false;
   }
 
+  // Returns a tuple of (points, values) where each point always has a value (0 if missing)
   List<LatLng> _buildHeatmapPoints() {
-    // Build a list of (LatLng, value) pairs where both are valid
-    final pairs = results
-        .map((item) {
-          final lat = _parseDouble(item['Location_Latitude']);
-          final lng = _parseDouble(item['Location_Longitude']);
-          final val = double.tryParse(item['Result_Measure']?.toString() ?? '');
-          if (lat != null && lng != null && val != null) {
-            return {'point': LatLng(lat, lng), 'value': val};
-          }
-          return null;
-        })
-        .whereType<Map<String, dynamic>>()
-        .toList();
-    return pairs.map((e) => e['point'] as LatLng).toList();
+    // Use all unique locations with valid coordinates
+    final Set<String> seen = {};
+    final List<LatLng> uniquePoints = [];
+    for (final item in results) {
+      final lat = _parseDouble(item['Location_Latitude']);
+      final lng = _parseDouble(item['Location_Longitude']);
+      if (lat != null && lng != null) {
+        final key = '${lat.toStringAsFixed(5)},${lng.toStringAsFixed(5)}';
+        if (!seen.contains(key)) {
+          seen.add(key);
+          uniquePoints.add(LatLng(lat, lng));
+        }
+      }
+    }
+    return uniquePoints;
   }
 
-  List<double> _buildHeatmapValues() {
-    // Ensure values list matches points list length
-    final pairs = results
-        .map((item) {
-          final lat = _parseDouble(item['Location_Latitude']);
-          final lng = _parseDouble(item['Location_Longitude']);
-          final val = double.tryParse(item['Result_Measure']?.toString() ?? '');
-          if (lat != null && lng != null && val != null) {
-            return {'point': LatLng(lat, lng), 'value': val};
-          }
-          return null;
-        })
-        .whereType<Map<String, dynamic>>()
-        .toList();
-    return pairs.map((e) => e['value'] as double).toList();
+  List<double> _buildHeatmapValues(List<LatLng> points) {
+    // For each point, find the max value at that location, or 0 if none
+    final Map<String, List<double>> valuesByLocation = {};
+    for (final item in results) {
+      final lat = _parseDouble(item['Location_Latitude']);
+      final lng = _parseDouble(item['Location_Longitude']);
+      final valRaw = item['Result_Measure'];
+      final val = (valRaw == null || valRaw.toString().trim().isEmpty)
+          ? null
+          : double.tryParse(valRaw.toString());
+      if (lat != null && lng != null && val != null) {
+        final key = '${lat.toStringAsFixed(5)},${lng.toStringAsFixed(5)}';
+        valuesByLocation.putIfAbsent(key, () => []).add(val);
+      }
+    }
+    return points.map((pt) {
+      final key =
+          '${pt.latitude.toStringAsFixed(5)},${pt.longitude.toStringAsFixed(5)}';
+      final vals = valuesByLocation[key];
+      if (vals == null || vals.isEmpty) return 0.0;
+      return vals.reduce((a, b) => a > b ? a : b);
+    }).toList();
   }
 }
 
