@@ -12,7 +12,7 @@ const Map<String, String> contaminantOptions = {
 class DropDown extends StatelessWidget {
   final String? value;
   final ValueChanged<String?>? onChanged;
-  const DropDown({Key? key, this.value, this.onChanged}) : super(key: key);
+  const DropDown({super.key, this.value, this.onChanged});
 
   @override
   Widget build(BuildContext context) {

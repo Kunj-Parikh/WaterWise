@@ -702,175 +702,192 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('WaterWise')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      // Map<String, dynamic> is JSON format
-                      child: TypeAheadField<Map<String, dynamic>>(
-                        builder: (context, controller, focusNode) => TextField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          decoration: InputDecoration(
-                            hintText: 'Search city, state, country, zip, etc.',
-                            prefixIcon: Icon(Icons.search),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        // Map<String, dynamic> is JSON format
+                        child: TypeAheadField<Map<String, dynamic>>(
+                          builder: (context, controller, focusNode) =>
+                              TextField(
+                                controller: controller,
+                                focusNode: focusNode,
+                                decoration: InputDecoration(
+                                  hintText:
+                                      'Search city, state, country, zip, etc.',
+                                  prefixIcon: Icon(Icons.search),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
 
-                        // callback every time user types
-                        suggestionsCallback: (pattern) async {
-                          if (_debounce?.isActive ?? false) _debounce!.cancel();
-                          final completer =
-                              Completer<List<Map<String, dynamic>>>();
-                          _debounce = Timer(
-                            const Duration(milliseconds: 500),
-                            () async {
-                              if (pattern.trim().isEmpty) {
-                                completer.complete([]);
-                                return;
-                              }
-                              print('Callback');
-                              final url = Uri.parse(
-                                'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
-                              );
-                              print('Fetching suggestions from: $url');
-                              final response = await http.get(url);
-                              if (response.statusCode == 200) {
-                                print('Received response 200');
-                                final List data = jsonDecode(response.body);
-                                completer.complete(
-                                  data.cast<Map<String, dynamic>>(),
+                          // callback every time user types
+                          suggestionsCallback: (pattern) async {
+                            if (_debounce?.isActive ?? false) {
+                              _debounce!.cancel();
+                            }
+                            final completer =
+                                Completer<List<Map<String, dynamic>>>();
+                            _debounce = Timer(
+                              const Duration(milliseconds: 500),
+                              () async {
+                                if (pattern.trim().isEmpty) {
+                                  completer.complete([]);
+                                  return;
+                                }
+                                print('Callback');
+                                final url = Uri.parse(
+                                  'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
                                 );
-                                return;
-                              }
-                              completer.complete([]);
-                            },
-                          );
-                          return completer.future;
-                        },
-                        itemBuilder: (context, suggestion) {
-                          final display = suggestion['display_name'] ?? '';
-                          return ListTile(title: Text(display));
-                        },
-                        onSelected: (suggestion) {
-                          _searchController.text =
-                              suggestion['display_name'] ?? '';
-                          final lat = double.tryParse(suggestion['lat'] ?? '');
-                          final lon = double.tryParse(suggestion['lon'] ?? '');
-                          if (lat != null && lon != null) {
-                            setState(() {
-                              _currentPosition = LatLng(lat, lon);
-                              _newPosition = LatLng(
-                                lat,
-                                lon,
-                              ); // Ensure map recenters
-                            });
-                            fetchLocations();
-                          }
-                        },
-                        emptyBuilder: (context) {
-                          if (_searchController.text.trim().isEmpty) {
-                            return SizedBox.shrink();
-                          }
-                          return const ListTile(title: Text('No items found!'));
-                        },
+                                print('Fetching suggestions from: $url');
+                                final response = await http.get(url);
+                                if (response.statusCode == 200) {
+                                  print('Received response 200');
+                                  final List data = jsonDecode(response.body);
+                                  completer.complete(
+                                    data.cast<Map<String, dynamic>>(),
+                                  );
+                                  return;
+                                }
+                                completer.complete([]);
+                              },
+                            );
+                            return completer.future;
+                          },
+                          itemBuilder: (context, suggestion) {
+                            final display = suggestion['display_name'] ?? '';
+                            return ListTile(title: Text(display));
+                          },
+                          onSelected: (suggestion) {
+                            _searchController.text =
+                                suggestion['display_name'] ?? '';
+                            final lat = double.tryParse(
+                              suggestion['lat'] ?? '',
+                            );
+                            final lon = double.tryParse(
+                              suggestion['lon'] ?? '',
+                            );
+                            if (lat != null && lon != null) {
+                              setState(() {
+                                _currentPosition = LatLng(lat, lon);
+                                _newPosition = LatLng(
+                                  lat,
+                                  lon,
+                                ); // Ensure map recenters
+                              });
+                              fetchLocations();
+                            }
+                          },
+                          emptyBuilder: (context) {
+                            if (_searchController.text.trim().isEmpty) {
+                              return SizedBox.shrink();
+                            }
+                            return const ListTile(
+                              title: Text('No items found!'),
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                    SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () async {
-                        LocationPermission permission =
-                            await Geolocator.checkPermission();
-                        if (permission == LocationPermission.denied ||
-                            permission == LocationPermission.deniedForever) {
-                          permission = await Geolocator.requestPermission();
+                      SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          LocationPermission permission =
+                              await Geolocator.checkPermission();
                           if (permission == LocationPermission.denied ||
                               permission == LocationPermission.deniedForever) {
-                            return;
+                            permission = await Geolocator.requestPermission();
+                            if (permission == LocationPermission.denied ||
+                                permission ==
+                                    LocationPermission.deniedForever) {
+                              return;
+                            }
                           }
-                        }
-                        final LocationSettings locationSettings =
-                            LocationSettings(accuracy: LocationAccuracy.high);
-                        Position position = await Geolocator.getCurrentPosition(
-                          locationSettings: locationSettings,
-                        );
-                        final userLatLng = LatLng(
-                          position.latitude,
-                          position.longitude,
-                        );
-                        setState(() {
-                          _currentPosition = userLatLng;
-                          _newPosition = userLatLng;
-                        });
-                        await fetchLocations();
-                        setState(() {
-                          // This will trigger a rebuild of AdaptiveMap with a new ValueKey
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          final LocationSettings locationSettings =
+                              LocationSettings(accuracy: LocationAccuracy.high);
+                          Position position =
+                              await Geolocator.getCurrentPosition(
+                                locationSettings: locationSettings,
+                              );
+                          final userLatLng = LatLng(
+                            position.latitude,
+                            position.longitude,
+                          );
+                          setState(() {
+                            _currentPosition = userLatLng;
+                            _newPosition = userLatLng;
+                          });
+                          await fetchLocations();
+                          setState(() {
+                            // This will trigger a rebuild of AdaptiveMap with a new ValueKey
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
                         ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
+                        child: Row(
+                          children: [
+                            Icon(Icons.my_location),
+                            SizedBox(width: 4),
+                            Text('My Location'),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.my_location),
-                          SizedBox(width: 4),
-                          Text('My Location'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: fetchLocations,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ],
                   ),
-                  child: Text('Refresh Water Data Nearby'),
-                ),
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        'View specific contamination amounts:',
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                  SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: fetchLocations,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
                       ),
                     ),
-                    SizedBox(width: 8),
-                    Expanded(child: buildMenuBar()),
-                  ],
-                ),
-              ],
+                    child: Text('Refresh Water Data Nearby'),
+                  ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          'Choose contaminant:',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(child: buildMenuBar()),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (loading)
-            Expanded(child: Center(child: CircularProgressIndicator()))
-          else
-            Expanded(child: Stack(children: [buildMap()])),
-        ],
+            if (loading)
+              Expanded(child: Center(child: CircularProgressIndicator()))
+            else
+              Expanded(child: Stack(children: [buildMap()])),
+          ],
+        ),
       ),
     );
   }
