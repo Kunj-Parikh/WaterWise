@@ -451,7 +451,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                 ),
                 // Floating action button for dashboard
                 Positioned(
-                  top: 16,
+                  top: 80,
                   right: 16,
                   child: FloatingActionButton.extended(
                     heroTag: 'dashboard',
@@ -561,6 +561,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
         ],
       );
     }
+
     // Mobile/web: overlay sidebar
     return Stack(
       children: [
@@ -574,7 +575,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           extraLayers: heatmapLayer,
         ),
         Positioned(
-          top: 16,
+          top: 80,
           right: 16,
           child: FloatingActionButton.extended(
             heroTag: 'dashboard',
@@ -700,195 +701,457 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop =
+        !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
     return Scaffold(
-      appBar: AppBar(title: Text('WaterWise')),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        // Map<String, dynamic> is JSON format
-                        child: TypeAheadField<Map<String, dynamic>>(
-                          builder: (context, controller, focusNode) =>
-                              TextField(
-                                controller: controller,
-                                focusNode: focusNode,
-                                decoration: InputDecoration(
-                                  hintText:
-                                      'Search city, state, country, zip, etc.',
-                                  prefixIcon: Icon(Icons.search),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                              ),
-
-                          // callback every time user types
-                          suggestionsCallback: (pattern) async {
-                            if (_debounce?.isActive ?? false) {
-                              _debounce!.cancel();
-                            }
-                            final completer =
-                                Completer<List<Map<String, dynamic>>>();
-                            _debounce = Timer(
-                              const Duration(milliseconds: 500),
-                              () async {
-                                if (pattern.trim().isEmpty) {
-                                  completer.complete([]);
-                                  return;
-                                }
-                                print('Callback');
-                                final url = Uri.parse(
-                                  'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
-                                );
-                                print('Fetching suggestions from: $url');
-                                final response = await http.get(url);
-                                if (response.statusCode == 200) {
-                                  print('Received response 200');
-                                  final List data = jsonDecode(response.body);
-                                  completer.complete(
-                                    data.cast<Map<String, dynamic>>(),
-                                  );
-                                  return;
-                                }
-                                completer.complete([]);
-                              },
-                            );
-                            return completer.future;
-                          },
-                          itemBuilder: (context, suggestion) {
-                            final display = suggestion['display_name'] ?? '';
-                            return ListTile(title: Text(display));
-                          },
-                          onSelected: (suggestion) {
-                            _searchController.text =
-                                suggestion['display_name'] ?? '';
-                            final lat = double.tryParse(
-                              suggestion['lat'] ?? '',
-                            );
-                            final lon = double.tryParse(
-                              suggestion['lon'] ?? '',
-                            );
-                            if (lat != null && lon != null) {
-                              setState(() {
-                                _currentPosition = LatLng(lat, lon);
-                                _newPosition = LatLng(
-                                  lat,
-                                  lon,
-                                ); // Ensure map recenters
-                              });
-                              fetchLocations();
-                            }
-                          },
-                          emptyBuilder: (context) {
-                            if (_searchController.text.trim().isEmpty) {
-                              return SizedBox.shrink();
-                            }
-                            return const ListTile(
-                              title: Text('No items found!'),
-                            );
-                          },
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () async {
-                          LocationPermission permission =
-                              await Geolocator.checkPermission();
-                          if (permission == LocationPermission.denied ||
-                              permission == LocationPermission.deniedForever) {
-                            permission = await Geolocator.requestPermission();
-                            if (permission == LocationPermission.denied ||
-                                permission ==
-                                    LocationPermission.deniedForever) {
-                              return;
-                            }
-                          }
-                          final LocationSettings locationSettings =
-                              LocationSettings(accuracy: LocationAccuracy.high);
-                          Position position =
-                              await Geolocator.getCurrentPosition(
-                                locationSettings: locationSettings,
-                              );
-                          final userLatLng = LatLng(
-                            position.latitude,
-                            position.longitude,
-                          );
-                          setState(() {
-                            _currentPosition = userLatLng;
-                            _newPosition = userLatLng;
-                          });
-                          await fetchLocations();
-                          setState(() {
-                            // This will trigger a rebuild of AdaptiveMap with a new ValueKey
-                          });
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.my_location),
-                            SizedBox(width: 4),
-                            Text('My Location'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: fetchLocations,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
+      appBar: isDesktop
+          ? AppBar(
+              backgroundColor: Colors.white,
+              title: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 80),
+                child: Row(
+                  children: [
+                    Icon(Icons.water_drop_sharp, color: Colors.blue, size: 28),
+                    SizedBox(width: 4),
+                    Text(
+                      'WaterWise',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Inter',
                       ),
                     ),
-                    child: Text('Refresh Water Data Nearby'),
-                  ),
-                  Row(
+                  ],
+                ),
+              ),
+            )
+          : AppBar(title: Text('WaterWise')),
+      body: isDesktop
+          ? Stack(
+              children: [
+                Positioned.fill(child: buildMap()),
+                Positioned(
+                  top: 12,
+                  left: 16,
+                  right: 16,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Flexible(
-                        child: Text(
-                          'Choose contaminant:',
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: _showSidebar ? 2 : 3,
+                            child: TypeAheadField<Map<String, dynamic>>(
+                              builder: (context, controller, focusNode) {
+                                return Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 12,
+                                  ),
+                                  child: TextField(
+                                    controller: controller,
+                                    focusNode: focusNode,
+                                    decoration: InputDecoration(
+                                      hintText:
+                                          'Search city, state, country, ZIP, etc.',
+                                      prefixIcon: Icon(Icons.search),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
+                                  ),
+                                );
+                              },
+                              // callback every time user types
+                              suggestionsCallback: (pattern) async {
+                                if (_debounce?.isActive ?? false)
+                                  _debounce!.cancel();
+                                final completer =
+                                    Completer<List<Map<String, dynamic>>>();
+                                _debounce = Timer(
+                                  const Duration(milliseconds: 500),
+                                  () async {
+                                    if (pattern.trim().isEmpty) {
+                                      completer.complete([]);
+                                      return;
+                                    }
+                                    final url = Uri.parse(
+                                      'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
+                                    );
+                                    final response = await http.get(url);
+                                    if (response.statusCode == 200) {
+                                      final List data = jsonDecode(
+                                        response.body,
+                                      );
+                                      completer.complete(
+                                        data.cast<Map<String, dynamic>>(),
+                                      );
+                                      return;
+                                    }
+                                    completer.complete([]);
+                                  },
+                                );
+                                return completer.future;
+                              },
+                              itemBuilder: (context, suggestion) {
+                                final display =
+                                    suggestion['display_name'] ?? '';
+                                return ListTile(title: Text(display));
+                              },
+                              onSelected: (suggestion) {
+                                _searchController.text =
+                                    suggestion['display_name'] ?? '';
+                                final lat = double.tryParse(
+                                  suggestion['lat'] ?? '',
+                                );
+                                final lon = double.tryParse(
+                                  suggestion['lon'] ?? '',
+                                );
+                                if (lat != null && lon != null) {
+                                  setState(() {
+                                    _currentPosition = LatLng(lat, lon);
+                                    _newPosition = LatLng(lat, lon);
+                                  });
+                                  fetchLocations();
+                                }
+                              },
+                              emptyBuilder: (context) {
+                                if (_searchController.text.trim().isEmpty) {
+                                  return SizedBox.shrink();
+                                }
+                                return const ListTile(
+                                  title: Text('No items found!'),
+                                );
+                              },
+                            ),
+                          ),
+                          SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () async {
+                              LocationPermission permission =
+                                  await Geolocator.checkPermission();
+                              if (permission == LocationPermission.denied ||
+                                  permission ==
+                                      LocationPermission.deniedForever) {
+                                permission =
+                                    await Geolocator.requestPermission();
+                                if (permission == LocationPermission.denied ||
+                                    permission ==
+                                        LocationPermission.deniedForever) {
+                                  return;
+                                }
+                              }
+                              final LocationSettings locationSettings =
+                                  LocationSettings(
+                                    accuracy: LocationAccuracy.high,
+                                  );
+                              Position position =
+                                  await Geolocator.getCurrentPosition(
+                                    locationSettings: locationSettings,
+                                  );
+                              final userLatLng = LatLng(
+                                position.latitude,
+                                position.longitude,
+                              );
+                              setState(() {
+                                _currentPosition = userLatLng;
+                                _newPosition = userLatLng;
+                              });
+                              await fetchLocations();
+                              setState(() {});
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              minimumSize: Size(0, 48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.my_location, color: Colors.red),
+                                SizedBox(width: 4),
+                                Text('My Location'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 8,
+                                offset: Offset(0, 0),
+                              ),
+                            ],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: SizedBox(
+                            height: 36,
+                            child: ElevatedButton(
+                              onPressed: fetchLocations,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.teal,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                              ),
+                              child: Text('Refresh Water Data Nearby'),
+                            ),
+                          ),
                         ),
                       ),
-                      SizedBox(width: 8),
-                      Expanded(child: buildMenuBar()),
+                      SizedBox(height: 16),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 32),
+                        child: Container(
+                          height: 36,
+                          width: 400,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 8,
+                                offset: Offset(0, 0),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 0,
+                            ),
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'Choose contaminant:',
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(child: buildMenuBar()),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
+                ),
+                if (loading)
+                  Positioned.fill(
+                    child: Container(
+                      color: Colors.black45,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+              ],
+            )
+          : SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TypeAheadField<Map<String, dynamic>>(
+                                builder: (context, controller, focusNode) =>
+                                    TextField(
+                                      controller: controller,
+                                      focusNode: focusNode,
+                                      decoration: InputDecoration(
+                                        hintText:
+                                            'Search city, state, country, zip, etc.',
+                                        prefixIcon: Icon(Icons.search),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                suggestionsCallback: (pattern) async {
+                                  if (_debounce?.isActive ?? false)
+                                    _debounce!.cancel();
+                                  final completer =
+                                      Completer<List<Map<String, dynamic>>>();
+                                  _debounce = Timer(
+                                    const Duration(milliseconds: 500),
+                                    () async {
+                                      if (pattern.trim().isEmpty) {
+                                        completer.complete([]);
+                                        return;
+                                      }
+                                      final url = Uri.parse(
+                                        'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
+                                      );
+                                      final response = await http.get(url);
+                                      if (response.statusCode == 200) {
+                                        final List data = jsonDecode(
+                                          response.body,
+                                        );
+                                        completer.complete(
+                                          data.cast<Map<String, dynamic>>(),
+                                        );
+                                        return;
+                                      }
+                                      completer.complete([]);
+                                    },
+                                  );
+                                  return completer.future;
+                                },
+                                itemBuilder: (context, suggestion) {
+                                  final display =
+                                      suggestion['display_name'] ?? '';
+                                  return ListTile(title: Text(display));
+                                },
+                                onSelected: (suggestion) {
+                                  _searchController.text =
+                                      suggestion['display_name'] ?? '';
+                                  final lat = double.tryParse(
+                                    suggestion['lat'] ?? '',
+                                  );
+                                  final lon = double.tryParse(
+                                    suggestion['lon'] ?? '',
+                                  );
+                                  if (lat != null && lon != null) {
+                                    setState(() {
+                                      _currentPosition = LatLng(lat, lon);
+                                      _newPosition = LatLng(lat, lon);
+                                    });
+                                    fetchLocations();
+                                  }
+                                },
+                                emptyBuilder: (context) {
+                                  if (_searchController.text.trim().isEmpty) {
+                                    return SizedBox.shrink();
+                                  }
+                                  return const ListTile(
+                                    title: Text('No items found!'),
+                                  );
+                                },
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            ElevatedButton(
+                              onPressed: () async {
+                                LocationPermission permission =
+                                    await Geolocator.checkPermission();
+                                if (permission == LocationPermission.denied ||
+                                    permission ==
+                                        LocationPermission.deniedForever) {
+                                  permission =
+                                      await Geolocator.requestPermission();
+                                  if (permission == LocationPermission.denied ||
+                                      permission ==
+                                          LocationPermission.deniedForever) {
+                                    return;
+                                  }
+                                }
+                                final LocationSettings locationSettings =
+                                    LocationSettings(
+                                      accuracy: LocationAccuracy.high,
+                                    );
+                                Position position =
+                                    await Geolocator.getCurrentPosition(
+                                      locationSettings: locationSettings,
+                                    );
+                                final userLatLng = LatLng(
+                                  position.latitude,
+                                  position.longitude,
+                                );
+                                setState(() {
+                                  _currentPosition = userLatLng;
+                                  _newPosition = userLatLng;
+                                });
+                                await fetchLocations();
+                                setState(() {});
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.my_location),
+                                  SizedBox(width: 4),
+                                  Text('My Location'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: fetchLocations,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                          child: Text('Refresh Water Data Nearby'),
+                        ),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Choose contaminant:',
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(child: buildMenuBar()),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (loading)
+                    Expanded(child: Center(child: CircularProgressIndicator()))
+                  else
+                    Expanded(child: Stack(children: [buildMap()])),
                 ],
               ),
             ),
-            if (loading)
-              Expanded(child: Center(child: CircularProgressIndicator()))
-            else
-              Expanded(child: Stack(children: [buildMap()])),
-          ],
-        ),
-      ),
     );
   }
 
