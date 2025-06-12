@@ -215,24 +215,33 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           child: Icon(Icons.location_on, color: Colors.black, size: 36),
         ),
         ...closest.map<Marker?>((item) {
-          Color getMarkerColor(double value, String type) {
+          Color getMarkerColor(String type) {
             // if(type == 'Every Contaminant') {
             //   int contIndex = contaminantList.indexOf(type);
             //   if (value <= contaminantLimits[contIndex]) return Colors.green;
             //   if (value <= 2*contaminantLimits[contIndex]) return Colors.orange;
             //   return Colors.red;
             // }
-            if(!contaminantList.contains(type)) {
-              if (value < 1) return Colors.green;
-              if (value < 10) return Colors.orange;
-              return Colors.red;
+            switch (type) {
+              case 'PFOA':
+                return Colors.orange;
+              case 'Lead':
+                return Colors.red;
+              default:
+                return Colors.blue;
             }
-            else {
-              int contIndex = contaminantList.indexOf(type);
-              if (value <= contaminantLimits[contIndex]) return Colors.green;
-              if (value <= 2*contaminantLimits[contIndex]) return Colors.orange;
-              return Colors.red;
-            }
+            
+            // if(!contaminantList.contains(type)) {
+            //   if (value < 1) return Colors.green;
+            //   if (value < 10) return Colors.orange;
+            //   return Colors.red;
+            // }
+            // else {
+            //   int contIndex = contaminantList.indexOf(type);
+            //   if (value <= contaminantLimits[contIndex]) return Colors.green;
+            //   if (value <= 2*contaminantLimits[contIndex]) return Colors.orange;
+            //   return Colors.red;
+            // }
           }
 
           double lat = _parseDouble(item['Location_Latitude'])!;
@@ -279,7 +288,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           if (allAtLocation.isNotEmpty && item != allAtLocation.first) {
             return null;
           }
-          print("Amount: $amount, Contaminant: $currContaminant");
+          print("Contaminant: $currContaminant");
           
           return Marker(
             point: LatLng(lat, lng),
@@ -298,7 +307,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                   },
                   child: Icon(
                     Icons.location_on,
-                    color: getMarkerColor(amount, currContaminant),
+                    color: getMarkerColor(currContaminant),
                     size: 36,
                   ),
                 ),
