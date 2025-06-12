@@ -2,9 +2,9 @@ import 'package:http/http.dart' as http;
 import 'package:csv2json/csv2json.dart';
 
 // Enum for contaminants
-enum ContaminantType { PFOA, Lead, Nitrates, Phosphates }
+enum ContaminantType { PFOAion, Lead, Nitrate, Phosphate, Arsenic }
 
-typedef ContaminantData = dynamic; // You can define a stricter type if needed
+typedef ContaminantData = dynamic; 
 
 class WaterDataService {
   // Map to store data for each contaminant
@@ -35,57 +35,65 @@ class WaterDataService {
     int radiusMiles = 10,
     List<ContaminantType>? contaminants,
   }) async {
-    final types = contaminants ?? [ContaminantType.PFOA];
+    final types = contaminants ?? [ContaminantType.PFOAion];
     for (final contaminant in types) {
       switch (contaminant) {
-        case ContaminantType.PFOA:
-          _contaminantData[ContaminantType.PFOA] = await fetchPFOAData(
+        case ContaminantType.PFOAion:
+          _contaminantData[ContaminantType.PFOAion] = await fetchPFOAIonData(
             latitude,
             longitude,
             radiusMiles: radiusMiles,
           );
           break;
-
         case ContaminantType.Lead:
-          // Implement fetchLeadData similarly
           _contaminantData[ContaminantType.Lead] = await fetchLeadData(
             latitude,
             longitude,
             radiusMiles: radiusMiles,
           );
           break;
-
-        case ContaminantType.Nitrates:
-          // Implement fetchNitratesData similarly
-          _contaminantData[ContaminantType.Nitrates] = {}; // Placeholder
+        case ContaminantType.Nitrate:
+          _contaminantData[ContaminantType.Nitrate] = await fetchNitrateData(
+            latitude,
+            longitude,
+            radiusMiles: radiusMiles,
+          );
           break;
-
-        case ContaminantType.Phosphates:
-          // Implement fetchPhosphatesData similarly
-          _contaminantData[ContaminantType.Phosphates] = {}; // Placeholder
+        case ContaminantType.Phosphate:
+          _contaminantData[ContaminantType.Phosphate] = await fetchPhosphateData(
+            latitude,
+            longitude,
+            radiusMiles: radiusMiles,
+          );
+          break;
+        case ContaminantType.Arsenic:
+          _contaminantData[ContaminantType.Arsenic] = await fetchArsenicData(
+            latitude,
+            longitude,
+            radiusMiles: radiusMiles,
+          );
           break;
       }
     }
   }
 
-  static Future<ContaminantData> fetchPFOAData(
+  static Future<ContaminantData> fetchPFOAIonData(
     double latitude,
     double longitude, {
     int radiusMiles = 10,
   }) async {
-    final baseUrl =
-        'https://www.waterqualitydata.us/wqx3/Result/search'; // Replace with real endpoint
-    final pCodes = 'pCode=53581&pCode=54083&pCode=54116';
+    final baseUrl = 'https://www.waterqualitydata.us/wqx3/Result/search';
     final locationString = 'within=$radiusMiles&lat=$latitude&long=$longitude';
+    final characteristics = 'characteristicName=PFOA%20ion';
     final url = Uri.parse(
-      '$baseUrl?$locationString&$pCodes&mimeType=csv&dataProfile=fullPhysChem&providers=NWIS&providers=STORET',
+      '$baseUrl?$locationString&$characteristics&mimeType=csv&dataProfile=fullPhysChem&providers=NWIS&providers=STORET',
     );
-    print('Fetching PFOA data from: $url');
+    print('Fetching PFOA ion data from: $url');
     try {
       final response = await http.get(url);
       final csvString = response.body;
       final data = csv2json(csvString);
-      // print(csvString);
+      // print(data);
       return data;
     } catch (e) {
       print(e);
@@ -118,5 +126,78 @@ class WaterDataService {
     }
   }
 
-  // TODO: More contaminant fetchers
+  static Future<ContaminantData> fetchNitrateData(
+    double latitude,
+    double longitude, {
+    int radiusMiles = 10,
+  }) async {
+    final baseUrl = 'https://www.waterqualitydata.us/wqx3/Result/search';
+    final locationString = 'within=$radiusMiles&lat=$latitude&long=$longitude';
+    final characteristics =
+        'characteristicName=Nitrate&startDateLo=06-11-2023&startDateHi=06-11-2025';
+    final url = Uri.parse(
+      '$baseUrl?$locationString&$characteristics&mimeType=csv&dataProfile=fullPhysChem&providers=NWIS&providers=STORET',
+    );
+    print('Fetching Nitrate data from: $url');
+    try {
+      final response = await http.get(url);
+      final csvString = response.body;
+      final data = csv2json(csvString);
+      // print(data);
+      return data;
+    } catch (e) {
+      print(e);
+      return {};
+    }
+  }
+
+  static Future<ContaminantData> fetchPhosphateData(
+    double latitude,
+    double longitude, {
+    int radiusMiles = 10,
+  }) async {
+    final baseUrl = 'https://www.waterqualitydata.us/wqx3/Result/search';
+    final locationString = 'within=$radiusMiles&lat=$latitude&long=$longitude';
+    final characteristics =
+        'characteristicName=Phosphate&startDateLo=06-11-2023&startDateHi=06-11-2025';
+    final url = Uri.parse(
+      '$baseUrl?$locationString&$characteristics&mimeType=csv&dataProfile=fullPhysChem&providers=NWIS&providers=STORET',
+    );
+    print('Fetching Phosphate data from: $url');
+    try {
+      final response = await http.get(url);
+      final csvString = response.body;
+      final data = csv2json(csvString);
+      // print(data);
+      return data;
+    } catch (e) {
+      print(e);
+      return {};
+    }
+  }
+
+  static Future<ContaminantData> fetchArsenicData(
+    double latitude,
+    double longitude, {
+    int radiusMiles = 10,
+  }) async {
+    final baseUrl = 'https://www.waterqualitydata.us/wqx3/Result/search';
+    final locationString = 'within=$radiusMiles&lat=$latitude&long=$longitude';
+    final characteristics =
+        'characteristicName=Arsenic&startDateLo=06-11-2023&startDateHi=06-11-2025';
+    final url = Uri.parse(
+      '$baseUrl?$locationString&$characteristics&mimeType=csv&dataProfile=fullPhysChem&providers=NWIS&providers=STORET',
+    );
+    print('Fetching Arsenic data from: $url');
+    try {
+      final response = await http.get(url);
+      final csvString = response.body;
+      final data = csv2json(csvString);
+      // print(data);
+      return data;
+    } catch (e) {
+      print(e);
+      return {};
+    }
+  }
 }

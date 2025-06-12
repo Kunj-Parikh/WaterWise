@@ -123,3 +123,4 @@ class _ComparisonDashboardState extends State<ComparisonDashboard> {
     );
   }
 }
+

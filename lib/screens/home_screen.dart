@@ -44,31 +44,36 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     // '54784': 'PFOS',
     // '57926': 'PFOS',
     // '58010': 'PFOS',
-    '53581': 'PFOA',
-    '54083': 'PFOA',
-    '54116': 'PFOA',
-    // '54136': 'PFOA',
-    // '54255': 'PFOA',
-    // '54287': 'PFOA',
-    // '54319': 'PFOA',
-    // '54651': 'PFOA',
-    // '54652': 'PFOA',
-    // '54669': 'PFOA',
-    // '54670': 'PFOA',
-    // '54671': 'PFOA',
-    // '54773': 'PFOA',
-    // '57915': 'PFOA',
-    // '57982': 'PFOA',
-    // '58009': 'PFOA',
-    // '63651': 'PFOA',
-    // '65227': 'PFOA',
+    '53581': 'PFOA ion',
+    '54083': 'PFOA ion',
+    '54116': 'PFOA ion',
+    // '54136': 'PFOA ion',
+    // '54255': 'PFOA ion',
+    // '54287': 'PFOA ion',
+    // '54319': 'PFOA ion',
+    // '54651': 'PFOA ion',
+    // '54652': 'PFOA ion',
+    // '54669': 'PFOA ion',
+    // '54670': 'PFOA ion',
+    // '54671': 'PFOA ion',
+    // '54773': 'PFOA ion',
+    // '57915': 'PFOA ion',
+    // '57982': 'PFOA ion',
+    // '58009': 'PFOA ion',
+    // '63651': 'PFOA ion',
+    // '65227': 'PFOA ion',
   };
   bool loading = false;
   LatLng? _currentPosition;
   LatLng? _newPosition;
 
-  List<String> contaminantList = <String>['PFOA', 'PFOS', 'Nitrates', 'Phosphates', 'Lead'];
-  List<double> contaminantLimits = <double>[10.0, 10.0, 10_000_000.0, 100.0, 5_000.0]; // ppt
+  List<double> contaminantLimits = <double>[
+    10.0,
+    10.0,
+    10_000_000.0,
+    100.0,
+    5_000.0,
+  ]; // ppt
   List<Marker> _markers = [];
   List<dynamic> results = [];
   Map<String, dynamic>? _selectedLocation;
@@ -100,15 +105,36 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   }
 
   // universal contamination index (uci)
-  double getUCI(double PFOA, double PFOS, double nitrates, double phosphates, double lead) {
+  double getUCI(
+    double pfoaIon,
+    double PFOS,
+    double nitrates,
+    double phosphates,
+    double lead,
+  ) {
     // normalize all the values to a linear scale, between 0 and the limit for that contaminant
-    double normalizedPFOA = (PFOA.clamp(0, 2*contaminantLimits[0]))/2*contaminantLimits[0];
-    double normalizedPFOS = (PFOS.clamp(0, 2*contaminantLimits[1]))/2*contaminantLimits[1];
-    double normalizedNitrates = (nitrates.clamp(0, 2*contaminantLimits[2]))/2*contaminantLimits[2];
-    double normalizedPhosphates = (phosphates.clamp(0, 2*contaminantLimits[3]))/2*contaminantLimits[3];
-    double normalizedLead = (lead.clamp(0, 2*contaminantLimits[4]))/2*contaminantLimits[4];
+    double normalizedPFOA =
+        (pfoaIon.clamp(0, 2 * contaminantLimits[0])) / 2 * contaminantLimits[0];
+    double normalizedPFOS =
+        (PFOS.clamp(0, 2 * contaminantLimits[1])) / 2 * contaminantLimits[1];
+    double normalizedNitrates =
+        (nitrates.clamp(0, 2 * contaminantLimits[2])) /
+        2 *
+        contaminantLimits[2];
+    double normalizedPhosphates =
+        (phosphates.clamp(0, 2 * contaminantLimits[3])) /
+        2 *
+        contaminantLimits[3];
+    double normalizedLead =
+        (lead.clamp(0, 2 * contaminantLimits[4])) / 2 * contaminantLimits[4];
 
-    double UCI = (normalizedPFOA + normalizedPFOS + normalizedNitrates + normalizedPhosphates + normalizedLead) / 5;
+    double UCI =
+        (normalizedPFOA +
+            normalizedPFOS +
+            normalizedNitrates +
+            normalizedPhosphates +
+            normalizedLead) /
+        5;
     return UCI;
   }
 
@@ -144,15 +170,22 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     await WaterDataService.fetchAll(
       latitude: target.latitude,
       longitude: target.longitude,
-      radiusMiles: 10,
-      contaminants: [ContaminantType.PFOA, ContaminantType.Lead],
+      radiusMiles: 20,
+      contaminants: [
+        ContaminantType.PFOAion,
+        ContaminantType.Lead,
+        ContaminantType.Nitrate,
+        ContaminantType.Arsenic,
+      ],
     );
 
     // Get all contaminant data as a map
     final allData =
         WaterDataService.getContaminantData([
-              ContaminantType.PFOA,
+              ContaminantType.PFOAion,
               ContaminantType.Lead,
+              ContaminantType.Nitrate,
+              ContaminantType.Arsenic,
             ])
             as Map<ContaminantType, dynamic>;
 
@@ -169,8 +202,20 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
 
     setState(() {
       results = locations;
+      // Group all records by unique location identifier first
+      final Map<String, List<dynamic>> byLocation = {};
+      for (final item in locations) {
+        final locId = item['Location_Identifier']?.toString();
+        if (locId == null) continue;
+        byLocation.putIfAbsent(locId, () => []).add(item);
+      }
+      // Now, for each location, pick a representative item for coordinates
+      final List<dynamic> uniqueLocations = byLocation.entries.map((entry) {
+        // Use the first item for coordinates
+        return entry.value.first;
+      }).toList();
       // Filter valid locations with coordinates
-      final validLocations = locations.where((item) {
+      final validLocations = uniqueLocations.where((item) {
         double? lat =
             _parseDouble(item['Location_LatitudeStandardized']) ??
             _parseDouble(item['Location_Latitude']);
@@ -207,6 +252,13 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
         return dA.compareTo(dB);
       });
       final closest = validLocations.take(50).toList();
+      // Now, for each of the closest locations, aggregate all contaminant records
+      final Map<String, List<dynamic>> closestByLocation = {};
+      for (final item in closest) {
+        final locId = item['Location_Identifier']?.toString();
+        if (locId == null) continue;
+        closestByLocation[locId] = byLocation[locId]!;
+      }
       _markers = [
         // Black pin for current location
         Marker(
@@ -215,62 +267,94 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           height: 40,
           child: Icon(Icons.location_on, color: Colors.black, size: 36),
         ),
-        ...closest.map<Marker?>((item) {
-          Color getMarkerColor(String type) {
-            switch (type) {
-              case 'PFOA':
-                return Colors.orange;
-              case 'Lead':
-                return Colors.red;
-              default:
-                return Colors.blue;
-            }
+        ...closestByLocation.entries.map<Marker>((entry) {
+          final items = entry.value;
+          final first = items.first;
+          double lat = _parseDouble(first['Location_Latitude'])!;
+          double lng = _parseDouble(first['Location_Longitude'])!;
+          // Aggregate all contaminants and all historical records for this location
+          final Map<String, List<Map<String, dynamic>>> byContaminant = {};
+          for (final item in items) {
+            final code =
+                item['Result_Characteristic']?.toString() ??
+                item['__contaminantType']?.toString() ??
+                'Unknown';
+            byContaminant.putIfAbsent(code, () => []).add(item);
           }
-
-          double lat = _parseDouble(item['Location_Latitude'])!;
-          double lng = _parseDouble(item['Location_Longitude'])!;
-          final type = item['__contaminantType'] ?? 'Unknown';
-          final detectionCondition = item['Result_ResultDetectionCondition']
-              ?.toString()
-              .toLowerCase();
-          final censorTypeA = item['DetectionLimit_TypeA']
-              ?.toString()
-              .toLowerCase();
-          final isCensored =
-              detectionCondition == 'not detected' ||
-              (censorTypeA == 'censoring level');
-          if (isCensored) return null;
-          final locationId = item['Location_Identifier']?.toString();
-          final allAtLocation = closest
-              .where((e) => e['Location_Identifier']?.toString() == locationId)
-              .toList();
-          // Filter out censored results in the group
-          final visibleAtLocation = allAtLocation.where((e) {
-            final det = e['Result_ResultDetectionCondition']
-                ?.toString()
-                .toLowerCase();
-            final censor = e['DetectionLimit_TypeA']?.toString().toLowerCase();
-            return (det != 'not detected' && censor != 'censoring level');
-          }).toList();
-          final locationName = item['Location_Name']?.toString() ?? '';
+          final List<String> contaminantBlurbs = [];
+          byContaminant.forEach((contaminantType, group) {
+            // Sort by date ascending
+            group.sort((a, b) {
+              final aDate =
+                  DateTime.tryParse(a['Activity_StartDate'] ?? '') ??
+                  DateTime(1970);
+              final bDate =
+                  DateTime.tryParse(b['Activity_StartDate'] ?? '') ??
+                  DateTime(1970);
+              return aDate.compareTo(bDate);
+            });
+            final List<String> records = group
+                .where((item) {
+                  final value = double.tryParse(
+                    item['Result_Measure']?.toString() ?? '',
+                  );
+                  return value != null && value > 0;
+                })
+                .map((item) {
+                  final date = item['Activity_StartDate'] ?? '';
+                  final value = item['Result_Measure'] ?? '';
+                  final unit = item['Result_MeasureUnit'] ?? '';
+                  return '  - ${date != '' ? 'Date: $date, ' : ''}Amount: $value $unit';
+                })
+                .toList();
+            contaminantBlurbs.add(
+              'Contaminant: $contaminantType\n${records.join('\n')}',
+            );
+          });
+          final locationName = first['Location_Name']?.toString() ?? '';
           final info = [
             if (locationName.isNotEmpty) '[BOLD]Location: $locationName[/BOLD]',
-            ...visibleAtLocation.take(3).map((e) {
-              final contaminant = e['Result_Characteristic'] ?? type;
-              final amount = e['Result_Measure']?.toString() ?? '';
-              final unit = e['Result_MeasureUnit']?.toString() ?? '';
-              final date = e['Activity_StartDate']?.toString();
-              String dateInfo = '';
-              if (date != null && date.isNotEmpty) {
-                dateInfo += 'Date: $date';
-              }
-              return 'Contaminant: $contaminant\nAmount: $amount $unit${dateInfo.isNotEmpty ? '\n$dateInfo' : ''}';
-            }),
+            ...contaminantBlurbs,
           ].join('\n\n');
-          // Only show one marker per location
-          if (allAtLocation.isNotEmpty && item != allAtLocation.first) {
-            return null;
+          // Find the contaminant with the highest latest value
+          String? maxContaminant;
+          double maxValue = double.negativeInfinity;
+          byContaminant.forEach((contaminantType, group) {
+            // Only consider records with a valid, nonzero value
+            final validRecords = group.where((item) {
+              final value = double.tryParse(
+                item['Result_Measure']?.toString() ?? '',
+              );
+              return value != null && value > 0;
+            }).toList();
+            if (validRecords.isEmpty) return;
+            // Find the latest record by date
+            validRecords.sort((a, b) {
+              final aDate =
+                  DateTime.tryParse(a['Activity_StartDate'] ?? '') ??
+                  DateTime(1970);
+              final bDate =
+                  DateTime.tryParse(b['Activity_StartDate'] ?? '') ??
+                  DateTime(1970);
+              return bDate.compareTo(aDate); // descending
+            });
+            final latest = validRecords.first;
+            final latestValue =
+                double.tryParse(latest['Result_Measure']?.toString() ?? '') ??
+                0.0;
+            if (latestValue > maxValue) {
+              maxValue = latestValue;
+              maxContaminant = contaminantType;
+            }
+          });
+          Color getMarkerColor(String? type) {
+            final colors = _contaminantColors();
+            if (type != null && colors.containsKey(type)) {
+              return colors[type]!;
+            }
+            return Colors.blue;
           }
+
           return Marker(
             point: LatLng(lat, lng),
             width: 40,
@@ -282,20 +366,20 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                   info: info,
                   onTap: () {
                     setState(() {
-                      _selectedLocation = item;
+                      _selectedLocation = first;
                       _showSidebar = true;
                     });
                   },
                   child: Icon(
                     Icons.location_on,
-                    color: getMarkerColor(type),
+                    color: getMarkerColor(maxContaminant),
                     size: 36,
                   ),
                 ),
               ),
             ),
           );
-        }).whereType<Marker>(),
+        }),
       ];
       loading = false;
     });
@@ -316,8 +400,6 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     }
     return null;
   }
-
-  
 
   Widget buildMap() {
     if (_currentPosition == null) {
@@ -787,61 +869,20 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   }
 
   Map<String, double> _buildContaminantValues(Map<String, dynamic>? location) {
-    if (location == null) return {};
-    // Find all contaminant results for this location (by Location_Identifier)
-    final locationId = location['Location_Identifier']?.toString();
-    final allResults = results
-        .where(
-          (item) =>
-              item['Location_Identifier']?.toString() == locationId &&
-              item['Result_Measure'] != null &&
-              item['Result_Characteristic'] != null,
-        )
-        .toList();
-    // For each contaminant, get the most recent value
+    // Use the new shared function for consistency
+    final series = buildContaminantSeries(location);
     final Map<String, double> values = {};
-    final Map<String, List<Map<String, dynamic>>> byContaminant = {};
-    for (final item in allResults) {
-      final code = item['Result_Characteristic']?.toString();
-      if (code == null) continue;
-      byContaminant.putIfAbsent(code, () => []).add(item);
+    for (final entry in series.entries) {
+      values[entry.key] = entry.value['latest'] ?? 0.0;
     }
-    byContaminant.forEach((code, group) {
-      // Sort by date descending
-      group.sort((a, b) {
-        final aDate =
-            DateTime.tryParse(a['Activity_StartDate'] ?? '') ?? DateTime(1970);
-        final bDate =
-            DateTime.tryParse(b['Activity_StartDate'] ?? '') ?? DateTime(1970);
-        return bDate.compareTo(aDate);
-      });
-      // Use Result_Characteristic if available, otherwise fallback to parameterNames map
-      final name =
-          (group.first['Result_Characteristic'] != null &&
-              group.first['Result_Characteristic'].toString().trim().isNotEmpty)
-          ? group.first['Result_Characteristic'].toString().trim()
-          : (parameterNames[code] ?? code);
-      final value = double.tryParse(
-        group.first['Result_Measure']?.toString() ?? '',
-      );
-      if (value != null) values[name] = value;
-    });
     return values;
   }
 
-  Map<String, Color> _contaminantColors() {
-    return {
-      'PFOS': Colors.teal,
-      'PFOA': Colors.orange,
-      'Lead': Colors.red,
-      'Nitrogen': Colors.blue,
-      'Phosphorus': Colors.green,
-    };
-  }
-
-  List<Widget> _buildSparklines(Map<String, dynamic>? location) {
-    if (location == null) return [];
-    // Find all contaminant results for this location (by Location_Identifier)
+  /// Returns a map of contaminant name -> (latest value, full time series, full date series)
+  Map<String, Map<String, dynamic>> buildContaminantSeries(
+    Map<String, dynamic>? location,
+  ) {
+    if (location == null) return {};
     final locationId = location['Location_Identifier']?.toString();
     final allResults = results
         .where(
@@ -851,18 +892,16 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
               item['Result_Characteristic'] != null,
         )
         .toList();
-    // Group by contaminant code
     final Map<String, List<Map<String, dynamic>>> byContaminant = {};
     for (final item in allResults) {
       final code = item['Result_Characteristic']?.toString();
       if (code == null) continue;
       byContaminant.putIfAbsent(code, () => []).add(item);
     }
-    final List<Widget> sparklines = [];
+    final Map<String, Map<String, dynamic>> result = {};
     for (final code in byContaminant.keys) {
-      final name = parameterNames[code] ?? code;
       final group = byContaminant[code]!;
-      // Sort by date
+      // Sort by date ascending
       group.sort((a, b) {
         final aDate =
             DateTime.tryParse(a['Activity_StartDate'] ?? '') ?? DateTime(1970);
@@ -884,6 +923,32 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           )
           .toList();
       if (values.isEmpty) continue;
+      final name =
+          (group.first['Result_Characteristic'] != null &&
+              group.first['Result_Characteristic'].toString().trim().isNotEmpty)
+          ? group.first['Result_Characteristic'].toString().trim()
+          : (parameterNames[code] ?? code);
+      result[name] = {'latest': values.last, 'series': values, 'dates': dates};
+    }
+    return result;
+  }
+
+  Map<String, Color> _contaminantColors() {
+    return {
+      'PFOA ion': Colors.blue,
+      'Lead': Colors.red,
+      'Nitrate': Colors.orange,
+      'Arsenic': Colors.green,
+    };
+  }
+
+  List<Widget> _buildSparklines(Map<String, dynamic>? location) {
+    final series = buildContaminantSeries(location);
+    final List<Widget> sparklines = [];
+    series.forEach((name, data) {
+      final values = (data['series'] as List<double>);
+      final dates = (data['dates'] as List<DateTime>);
+      if (values.isEmpty) return;
       sparklines.add(
         ContaminantSparkline(
           values: values,
@@ -893,7 +958,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           latestValue: values.last,
         ),
       );
-    }
+    });
     if (sparklines.isEmpty) {
       return [
         Padding(
@@ -944,7 +1009,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
       final val = (valRaw == null || valRaw.toString().trim().isEmpty)
           ? null
           : double.tryParse(valRaw.toString());
-      if (lat != null && lng != null && val != null) {
+      if (lat != null && lng != null && val != null && val > 0) {
         final key = '${lat.toStringAsFixed(5)},${lng.toStringAsFixed(5)}';
         valuesByLocation.putIfAbsent(key, () => []).add(val);
       }

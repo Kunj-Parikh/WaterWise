@@ -1,26 +1,33 @@
 import 'package:flutter/material.dart';
 
-List<String> contaminants = <String>['Every Contaminant', 'PFOA', 'PFOS', 'Nitrates', 'Phosphates', 'Lead'];
+List<String> contaminants = <String>[
+  'Every Contaminant',
+  'PFOA ion',
+  'Nitrate',
+  'Phosphate',
+  'Lead',
+];
 
 class _DropDownState extends State<DropDown> {
   String valueSelected = contaminants.first;
   @override
   Widget build(BuildContext context) {
-
     return DropdownButton<String>(
       value: valueSelected,
       elevation: 16,
       style: const TextStyle(color: Color.fromARGB(255, 10, 3, 116)),
-      underline: Container(height: 2, color: const Color.fromARGB(255, 70, 2, 255)),
+      underline: Container(
+        height: 2,
+        color: const Color.fromARGB(255, 70, 2, 255),
+      ),
       onChanged: (String? value) {
         setState(() {
           valueSelected = value!;
         });
       },
-      items: 
-        contaminants.map<DropdownMenuItem<String>>((String value) {
-          return DropdownMenuItem<String>(value: value, child: Text(value));
-        }).toList(),
+      items: contaminants.map<DropdownMenuItem<String>>((String value) {
+        return DropdownMenuItem<String>(value: value, child: Text(value));
+      }).toList(),
     );
   }
 }
@@ -39,7 +46,6 @@ class DropDown extends StatefulWidget {
   @override
   State<DropDown> createState() => _DropDownState();
 }
-
 
 class _FilterMenuBarState extends State<FilterMenuBar> {
   @override
@@ -60,7 +66,7 @@ class _FilterMenuBarState extends State<FilterMenuBar> {
           // CheckBox(label: "Nitrogen"),
           // CheckBox(label: "Phosphorus"),
           // CheckBox(label: "Lead"),
-          DropDown()
+          DropDown(),
         ],
       ),
     );

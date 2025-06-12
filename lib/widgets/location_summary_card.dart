@@ -23,6 +23,7 @@ class LocationSummaryCard extends StatelessWidget {
     final filteredContaminantEntries = contaminantValues.entries
         .where((e) => e.value > 0)
         .toList();
+    print('Filtered contaminants: $filteredContaminantEntries');
     final barGroups = <BarChartGroupData>[];
     for (int i = 0; i < filteredContaminantEntries.length; i++) {
       final contaminant = filteredContaminantEntries[i].key;
@@ -30,7 +31,7 @@ class LocationSummaryCard extends StatelessWidget {
       print('Contaminant: $contaminant, Value: $value');
       barGroups.add(
         BarChartGroupData(
-          x: value.toInt(),
+          x: i,
           barRods: [
             BarChartRodData(
               toY: value,
@@ -100,14 +101,15 @@ class LocationSummaryCard extends StatelessWidget {
                             getTitlesWidget: (value, meta) {
                               final idx = value.toInt();
                               if (idx < 0 ||
-                                  idx >= filteredContaminantEntries.length) {
-                                return Container();
+                                  idx >= filteredContaminantEntries.length ||
+                                  value != idx) {
+                                return const SizedBox.shrink();
                               }
-                              // Rotate and ellipsize label
+                              // Label each bar with the contaminant name, rotated for space
                               return Transform.rotate(
                                 angle: -0.5, // ~-28 degrees
                                 child: SizedBox(
-                                  width: 80, // wider for less wrap
+                                  width: 80,
                                   child: Text(
                                     filteredContaminantEntries[idx].key,
                                     style: const TextStyle(fontSize: 12),
@@ -119,6 +121,8 @@ class LocationSummaryCard extends StatelessWidget {
                               );
                             },
                             interval: 1,
+                            reservedSize:
+                                40
                           ),
                         ),
                       ),

@@ -42,7 +42,7 @@ class ContaminantHeatmap extends StatelessWidget {
               for (int i = 0; i < min(points.length, values.length); i++)
                 WeightedLatLng(
                   points[i],
-                  600 * (values[i]) / (maxValue == 0 ? 1.0 : maxValue)
+                  600 * (values[i]) / (maxValue == 0 ? 1.0 : maxValue),
                 ),
             ],
           ),
@@ -57,3 +57,4 @@ class ContaminantHeatmap extends StatelessWidget {
     );
   }
 }
+

@@ -69,3 +69,4 @@ class ContaminantSparkline extends StatelessWidget {
     );
   }
 }
+
