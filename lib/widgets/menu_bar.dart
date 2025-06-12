@@ -1,32 +1,45 @@
 import 'package:flutter/material.dart';
 
-List<String> contaminants = <String>[
-  'Every Contaminant',
-  'PFOA ion',
-  'Nitrate',
-  'Phosphate',
-  'Lead',
-];
+// display label -> internal value
+const Map<String, String> contaminantOptions = {
+  'Every Contaminant': 'Every Contaminant',
+  'PFOA ion': 'PFOAion',
+  'Lead': 'Lead',
+  'Nitrate': 'Nitrate',
+  'Arsenic': 'Arsenic',
+};
 
-class _DropDownState extends State<DropDown> {
-  String valueSelected = contaminants.first;
+class DropDown extends StatelessWidget {
+  final String? value;
+  final ValueChanged<String?>? onChanged;
+  const DropDown({Key? key, this.value, this.onChanged}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
+    // find display label for the current value
+    String? displayValue = contaminantOptions.entries
+        .firstWhere(
+          (e) => e.value == value,
+          orElse: () => contaminantOptions.entries.first,
+        )
+        .key;
     return DropdownButton<String>(
-      value: valueSelected,
+      value: displayValue,
       elevation: 16,
       style: const TextStyle(color: Color.fromARGB(255, 10, 3, 116)),
       underline: Container(
         height: 2,
         color: const Color.fromARGB(255, 70, 2, 255),
       ),
-      onChanged: (String? value) {
-        setState(() {
-          valueSelected = value!;
-        });
+      onChanged: (String? label) {
+        if (onChanged != null) {
+          onChanged!(contaminantOptions[label!]);
+        }
       },
-      items: contaminants.map<DropdownMenuItem<String>>((String value) {
-        return DropdownMenuItem<String>(value: value, child: Text(value));
+      items: contaminantOptions.keys.map<DropdownMenuItem<String>>((
+        String label,
+      ) {
+        return DropdownMenuItem<String>(value: label, child: Text(label));
       }).toList(),
     );
   }
@@ -39,14 +52,8 @@ class FilterMenuBar extends StatefulWidget {
   State<FilterMenuBar> createState() => _FilterMenuBarState();
 }
 
-class DropDown extends StatefulWidget {
-  const DropDown({super.key});
-
-  @override
-  State<DropDown> createState() => _DropDownState();
-}
-
 class _FilterMenuBarState extends State<FilterMenuBar> {
+  String valueSelected = contaminantOptions.values.first;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -65,7 +72,14 @@ class _FilterMenuBarState extends State<FilterMenuBar> {
           // CheckBox(label: "Nitrogen"),
           // CheckBox(label: "Phosphorus"),
           // CheckBox(label: "Lead"),
-          DropDown(),
+          DropDown(
+            value: valueSelected,
+            onChanged: (String? value) {
+              setState(() {
+                valueSelected = value!;
+              });
+            },
+          ),
         ],
       ),
     );

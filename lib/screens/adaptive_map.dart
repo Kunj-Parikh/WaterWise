@@ -87,19 +87,29 @@ class AdaptiveMap extends StatelessWidget {
                 child: Icon(Icons.fit_screen, color: Colors.teal),
                 onPressed: () {
                   if (markers.isNotEmpty) {
-                    var bounds = LatLngBounds(
-                      markers.first.point,
-                      markers.first.point,
-                    );
-                    for (final marker in markers) {
-                      bounds.extend(marker.point);
+                    // Collect unique points
+                    final uniquePoints = markers.map((m) => m.point).toSet();
+                    if (uniquePoints.length == 1) {
+                      // All markers at the same point, just center and zoom
+                      mapController.move(
+                        uniquePoints.first,
+                        15, // or any reasonable default zoom
+                      );
+                    } else {
+                      var bounds = LatLngBounds(
+                        markers.first.point,
+                        markers.first.point,
+                      );
+                      for (final marker in markers) {
+                        bounds.extend(marker.point);
+                      }
+                      mapController.fitCamera(
+                        CameraFit.bounds(
+                          bounds: bounds,
+                          padding: const EdgeInsets.all(32),
+                        ),
+                      );
                     }
-                    mapController.fitCamera(
-                      CameraFit.bounds(
-                        bounds: bounds,
-                        padding: const EdgeInsets.all(32),
-                      ),
-                    );
                   }
                 },
               ),

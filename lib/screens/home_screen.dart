@@ -91,6 +91,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   bool _searching = false;
 
   Timer? _debounce;
+  String? _selectedContaminant;
 
   @override
   void initState() {
@@ -259,6 +260,18 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
         if (locId == null) continue;
         closestByLocation[locId] = byLocation[locId]!;
       }
+      // Filter by selected contaminant if set
+      final filteredByLocation =
+          (_selectedContaminant == null ||
+              _selectedContaminant == 'Every Contaminant')
+          ? closestByLocation.entries
+          : closestByLocation.entries.where((entry) {
+              final items = entry.value;
+              final contaminantTypes = items
+                  .map((item) => item['__contaminantType']?.toString())
+                  .toSet();
+              return contaminantTypes.contains(_selectedContaminant);
+            });
       _markers = [
         // Black pin for current location
         Marker(
@@ -267,7 +280,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           height: 40,
           child: Icon(Icons.location_on, color: Colors.black, size: 36),
         ),
-        ...closestByLocation.entries.map<Marker>((entry) {
+        ...filteredByLocation.map<Marker>((entry) {
           final items = entry.value;
           final first = items.first;
           double lat = _parseDouble(first['Location_Latitude'])!;
@@ -675,7 +688,14 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
 
   // TODO: Kunj's manu bar
   Widget buildMenuBar() {
-    return DropDown();
+    return DropDown(
+      value: _selectedContaminant,
+      onChanged: (String? value) {
+        setState(() {
+          _selectedContaminant = value;
+        });
+      },
+    );
   }
 
   @override
