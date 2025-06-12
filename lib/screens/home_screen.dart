@@ -1,4 +1,3 @@
-// import 'dart:nativewrappers/_internal/vm/lib/ffi_native_type_patch.dart';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -205,10 +204,24 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           child: Icon(Icons.location_on, color: Colors.black, size: 36),
         ),
         ...closest.map<Marker?>((item) {
-          Color getMarkerColor(double value) {
-            if (value < 1) return Colors.green;
-            if (value < 10) return Colors.orange;
-            return Colors.red;
+          Color getMarkerColor(double value, String type) {
+            // if(type == 'Every Contaminant') {
+            //   int contIndex = contaminantList.indexOf(type);
+            //   if (value <= contaminantLimits[contIndex]) return Colors.green;
+            //   if (value <= 2*contaminantLimits[contIndex]) return Colors.orange;
+            //   return Colors.red;
+            // }
+            if(!contaminantList.contains(type)) {
+              if (value < 1) return Colors.green;
+              if (value < 10) return Colors.orange;
+              return Colors.red;
+            }
+            else {
+              int contIndex = contaminantList.indexOf(type);
+              if (value <= contaminantLimits[contIndex]) return Colors.green;
+              if (value <= 2*contaminantLimits[contIndex]) return Colors.orange;
+              return Colors.red;
+            }
           }
 
           double lat = _parseDouble(item['Location_Latitude'])!;
@@ -271,7 +284,8 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           if (allAtLocation.isNotEmpty && item != allAtLocation.first) {
             return null;
           }
-
+          print("Amount: $amount, Contaminant: $currContaminant");
+          
           return Marker(
             point: LatLng(lat, lng),
             width: 40,
@@ -292,7 +306,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                   },
                   child: Icon(
                     Icons.location_on,
-                    color: getMarkerColor(amount),
+                    color: getMarkerColor(amount, currContaminant),
                     size: 36,
                   ),
                 ),
@@ -471,6 +485,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
       );
     }
     // Mobile/web: overlay sidebar
+    
     return Stack(
       children: [
         AdaptiveMap(
@@ -595,10 +610,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     );
   }
 
-  // TODO: Kunj's manu bar
-  Widget buildMenuBar() {
-    return DropDown();
-  }
+  String currContaminant = 'Every Contaminant';
 
   @override
   Widget build(BuildContext context) {
@@ -676,6 +688,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                                 lon,
                               ); // Ensure map recenters
                             });
+                            
                             fetchLocations();
                           }
                         },
@@ -754,8 +767,26 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                 ),
                 Row(
                   children: [
-                    Text('View specific contamination amounts: '),
-                    buildMenuBar(),
+                    Text('Choose contaminant: '),
+                    DropdownButton<String>(
+                      value: currContaminant,
+                      items: [
+                        DropdownMenuItem(value: 'Every Contaminant', child: Text('Every Contaminant')),
+                        ...contaminantList.map((c) => DropdownMenuItem(value: c, child: Text(c))),
+                      ],
+                      onChanged: (value) {
+                        print('Selected contaminant: $currContaminant');
+                        if (value != null) {
+                          setState(() {
+                            currContaminant = value;
+                          });
+
+                          // call any additional logic here
+                        }
+                      },
+                    ),
+                    SizedBox(width: 8),
+                    // DropDown()
                   ],
                 ),
               ],
