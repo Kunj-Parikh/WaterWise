@@ -852,8 +852,15 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                 ),
                 Row(
                   children: [
-                    Text('View specific contamination amounts: '),
-                    buildMenuBar(),
+                    Flexible(
+                      child: Text(
+                        'View specific contamination amounts:',
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(child: buildMenuBar()),
                   ],
                 ),
               ],

@@ -40,6 +40,7 @@ class LocationSummaryCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
             ),
           ],
+          showingTooltipIndicators: [], // Hide tooltip indicators
         ),
       );
     }
@@ -83,51 +84,75 @@ class LocationSummaryCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 200,
-                  child: BarChart(
-                    BarChartData(
-                      barGroups: barGroups,
-                      borderData: FlBorderData(show: false),
-                      gridData: FlGridData(show: false),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 32,
+                  child: Stack(
+                    children: [
+                      BarChart(
+                        BarChartData(
+                          barGroups: barGroups,
+                          borderData: FlBorderData(show: false),
+                          gridData: FlGridData(show: false),
+                          titlesData: FlTitlesData(
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                reservedSize: 32,
+                              ),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget: (value, meta) {
+                                  final idx = value.toInt();
+                                  if (idx < 0 ||
+                                      idx >=
+                                          filteredContaminantEntries.length ||
+                                      value != idx) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  // Label each bar with the contaminant name, rotated for space
+                                  return Transform.rotate(
+                                    angle: -0.5, // ~-28 degrees
+                                    child: SizedBox(
+                                      width: 80,
+                                      child: Text(
+                                        filteredContaminantEntries[idx].key,
+                                        style: const TextStyle(fontSize: 12),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                interval: 1,
+                                reservedSize: 40,
+                              ),
+                            ),
+                            topTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: false,
+                              ), // Hide top index labels
+                            ),
+                            rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
                           ),
+                          barTouchData: BarTouchData(enabled: false),
                         ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (value, meta) {
-                              final idx = value.toInt();
-                              if (idx < 0 ||
-                                  idx >= filteredContaminantEntries.length ||
-                                  value != idx) {
-                                return const SizedBox.shrink();
-                              }
-                              // Label each bar with the contaminant name, rotated for space
-                              return Transform.rotate(
-                                angle: -0.5, // ~-28 degrees
-                                child: SizedBox(
-                                  width: 80,
-                                  child: Text(
-                                    filteredContaminantEntries[idx].key,
-                                    style: const TextStyle(fontSize: 12),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              );
-                            },
-                            interval: 1,
-                            reservedSize:
-                                40
+                      ),
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Text(
+                          'ng/L',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.grey[800],
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                      barTouchData: BarTouchData(enabled: false),
-                    ),
+                    ],
                   ),
                 ),
               ],
