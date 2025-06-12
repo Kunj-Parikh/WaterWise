@@ -136,25 +136,36 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
 
   Future<void> fetchLocations() async {
     final target = _newPosition ?? _currentPosition;
-
     if (target == null) return;
-
     setState(() => loading = true);
 
-    final data = await WaterDataService.fetchLocations(
-      target.latitude,
-      target.longitude,
+    // Fetch all contaminant types (update as needed)
+    await WaterDataService.fetchAll(
+      latitude: target.latitude,
+      longitude: target.longitude,
       radiusMiles: 10,
-      parameterCodes: parameterNames.keys.toList(),
+      contaminants: [ContaminantType.PFOA, ContaminantType.Lead],
     );
+
+    // Get all contaminant data as a map
+    final allData =
+        WaterDataService.getContaminantData([
+              ContaminantType.PFOA,
+              ContaminantType.Lead,
+            ])
+            as Map<ContaminantType, dynamic>;
+
+    // Combine all locations from all contaminants, tagging each with its type
     List<dynamic> locations = [];
-    try {
+    allData.forEach((type, data) {
       if (data is List) {
-        locations = data;
+        for (final item in data) {
+          item['__contaminantType'] = type.toString().split('.').last;
+          locations.add(item);
+        }
       }
-    } catch (e) {
-      print('Error extracting locations: $e');
-    }
+    });
+
     setState(() {
       results = locations;
       // Filter valid locations with coordinates
@@ -196,7 +207,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
       });
       final closest = validLocations.take(50).toList();
       _markers = [
-        // Red pin for current location
+        // Black pin for current location
         Marker(
           point: _currentPosition!,
           width: 40,
@@ -226,7 +237,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
 
           double lat = _parseDouble(item['Location_Latitude'])!;
           double lng = _parseDouble(item['Location_Longitude'])!;
-
+          final type = item['__contaminantType'] ?? 'Unknown';
           final detectionCondition = item['Result_ResultDetectionCondition']
               ?.toString()
               .toLowerCase();
@@ -237,7 +248,6 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
               detectionCondition == 'not detected' ||
               (censorTypeA == 'censoring level');
           if (isCensored) return null;
-
           final locationId = item['Location_Identifier']?.toString();
           final allAtLocation = closest
               .where((e) => e['Location_Identifier']?.toString() == locationId)
@@ -250,25 +260,11 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             final censor = e['DetectionLimit_TypeA']?.toString().toLowerCase();
             return (det != 'not detected' && censor != 'censoring level');
           }).toList();
-
-          final firstVisible = visibleAtLocation.isNotEmpty
-              ? visibleAtLocation.first
-              : null;
-          final amount =
-              double.tryParse(
-                firstVisible?['Result_Measure']?.toString() ?? '',
-              ) ??
-              0;
-
           final locationName = item['Location_Name']?.toString() ?? '';
-
           final info = [
-            if (locationName.isNotEmpty)
-              // Use a special marker for bold, then parse in Tooltip child
-              '[BOLD]Location: $locationName[/BOLD]',
+            if (locationName.isNotEmpty) '[BOLD]Location: $locationName[/BOLD]',
             ...visibleAtLocation.take(3).map((e) {
-              final code = e['USGSpcode']?.toString();
-              final contaminant = parameterNames[code] ?? code ?? 'Unknown';
+              final contaminant = e['Result_Characteristic'] ?? type;
               final amount = e['Result_Measure']?.toString() ?? '';
               final unit = e['Result_MeasureUnit']?.toString() ?? '';
               final date = e['Activity_StartDate']?.toString();
@@ -279,7 +275,6 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
               return 'Contaminant: $contaminant\nAmount: $amount $unit${dateInfo.isNotEmpty ? '\n$dateInfo' : ''}';
             }),
           ].join('\n\n');
-
           // Only show one marker per location
           if (allAtLocation.isNotEmpty && item != allAtLocation.first) {
             return null;
@@ -296,9 +291,6 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                 child: _CustomTooltip(
                   info: info,
                   onTap: () {
-                    print(
-                      'Marker tapped: ${item['Location_Name']?.toString() ?? ''}',
-                    );
                     setState(() {
                       _selectedLocation = item;
                       _showSidebar = true;
@@ -320,9 +312,9 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   }
 
   void _updateMapCenter(LatLng center) {
-    setState(() {
-      _newPosition = center;
-    });
+    // Only update _newPosition if the user is not in the middle of a programmatic recenter
+    // Remove the setState that updates _newPosition on every drag, so the map doesn't keep resetting its key
+    // Instead, only update _newPosition when the user selects a new location or uses the search/my location button
   }
 
   double? _parseDouble(dynamic value) {
@@ -795,13 +787,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           if (loading)
             Expanded(child: Center(child: CircularProgressIndicator()))
           else
-            Expanded(
-              child: Stack(
-                children: [
-                  buildMap(),
-                ],
-              ),
-            ),
+            Expanded(child: Stack(children: [buildMap()])),
         ],
       ),
     );
@@ -836,14 +822,14 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           (item) =>
               item['Location_Identifier']?.toString() == locationId &&
               item['Result_Measure'] != null &&
-              item['USGSpcode'] != null,
+              item['Result_Characteristic'] != null,
         )
         .toList();
     // For each contaminant, get the most recent value
     final Map<String, double> values = {};
     final Map<String, List<Map<String, dynamic>>> byContaminant = {};
     for (final item in allResults) {
-      final code = item['USGSpcode']?.toString();
+      final code = item['Result_Characteristic']?.toString();
       if (code == null) continue;
       byContaminant.putIfAbsent(code, () => []).add(item);
     }
@@ -856,7 +842,12 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             DateTime.tryParse(b['Activity_StartDate'] ?? '') ?? DateTime(1970);
         return bDate.compareTo(aDate);
       });
-      final name = parameterNames[code] ?? code;
+      // Use Result_Characteristic if available, otherwise fallback to parameterNames map
+      final name =
+          (group.first['Result_Characteristic'] != null &&
+              group.first['Result_Characteristic'].toString().trim().isNotEmpty)
+          ? group.first['Result_Characteristic'].toString().trim()
+          : (parameterNames[code] ?? code);
       final value = double.tryParse(
         group.first['Result_Measure']?.toString() ?? '',
       );
@@ -884,13 +875,13 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           (item) =>
               item['Location_Identifier']?.toString() == locationId &&
               item['Result_Measure'] != null &&
-              item['USGSpcode'] != null,
+              item['Result_Characteristic'] != null,
         )
         .toList();
     // Group by contaminant code
     final Map<String, List<Map<String, dynamic>>> byContaminant = {};
     for (final item in allResults) {
-      final code = item['USGSpcode']?.toString();
+      final code = item['Result_Characteristic']?.toString();
       if (code == null) continue;
       byContaminant.putIfAbsent(code, () => []).add(item);
     }

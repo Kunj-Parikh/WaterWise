@@ -1,35 +1,122 @@
 import 'package:http/http.dart' as http;
 import 'package:csv2json/csv2json.dart';
 
+// Enum for contaminants
+enum ContaminantType { PFOA, Lead, Nitrates, Phosphates }
+
+typedef ContaminantData = dynamic; // You can define a stricter type if needed
+
 class WaterDataService {
-  static Future<dynamic> fetchLocations(
+  // Map to store data for each contaminant
+  static final Map<ContaminantType, ContaminantData> _contaminantData = {};
+
+  // Public getter for contaminant data
+  static ContaminantData? getContaminantData(dynamic type) {
+    if (type is ContaminantType) {
+      return _contaminantData[type];
+    } else if (type is List<ContaminantType>) {
+      // Return a map of contaminant type to data
+      final Map<ContaminantType, ContaminantData?> result = {};
+      for (final t in type) {
+        result[t] = _contaminantData[t];
+      }
+      return result;
+    } else {
+      throw ArgumentError(
+        'type must be ContaminantType or List<ContaminantType>',
+      );
+    }
+  }
+
+  // Main entry: fetch all selected contaminants
+  static Future<void> fetchAll({
+    required double latitude,
+    required double longitude,
+    int radiusMiles = 10,
+    List<ContaminantType>? contaminants,
+  }) async {
+    final types = contaminants ?? [ContaminantType.PFOA];
+    for (final contaminant in types) {
+      switch (contaminant) {
+        case ContaminantType.PFOA:
+          _contaminantData[ContaminantType.PFOA] = await fetchPFOAData(
+            latitude,
+            longitude,
+            radiusMiles: radiusMiles,
+          );
+          break;
+
+        case ContaminantType.Lead:
+          // Implement fetchLeadData similarly
+          _contaminantData[ContaminantType.Lead] = await fetchLeadData(
+            latitude,
+            longitude,
+            radiusMiles: radiusMiles,
+          );
+          break;
+
+        case ContaminantType.Nitrates:
+          // Implement fetchNitratesData similarly
+          _contaminantData[ContaminantType.Nitrates] = {}; // Placeholder
+          break;
+
+        case ContaminantType.Phosphates:
+          // Implement fetchPhosphatesData similarly
+          _contaminantData[ContaminantType.Phosphates] = {}; // Placeholder
+          break;
+      }
+    }
+  }
+
+  static Future<ContaminantData> fetchPFOAData(
     double latitude,
     double longitude, {
     int radiusMiles = 10,
-    List<String> parameterCodes = const [],
   }) async {
-    // https://www.waterqualitydata.us/data/Station/search?within=50&lat=40.8450086&long=-73.9813876&startDateLo=01-01-2025&startDateHi=05-24-2025&mimeType=geojson&providers=NWIS&providers=STORET
-    // https://www.waterqualitydata.us/data/Station/search&within=50&lat=40.8449793&long=-73.9813663&startDateLo=01-01-2025&startDateHi=05-24-2025&mimeType=geojson&providers=NWIS&providers=STORET
-    final baseUrl = 'https://www.waterqualitydata.us/wqx3/Result/search';
+    final baseUrl =
+        'https://www.waterqualitydata.us/wqx3/Result/search'; // Replace with real endpoint
+    final pCodes = 'pCode=53581&pCode=54083&pCode=54116';
     final locationString = 'within=$radiusMiles&lat=$latitude&long=$longitude';
-    final pCodes = parameterCodes.isNotEmpty
-        ? parameterCodes.map((code) => 'pCode=$code').join('&')
-        : '';
     final url = Uri.parse(
-      '$baseUrl?$locationString&${pCodes.isNotEmpty ? '$pCodes&' : ''}mimeType=csv&dataProfile=fullPhysChem&providers=NWIS&providers=STORET',
+      '$baseUrl?$locationString&$pCodes&mimeType=csv&dataProfile=fullPhysChem&providers=NWIS&providers=STORET',
     );
-    print('Fetching data from: $url');
-
+    print('Fetching PFOA data from: $url');
     try {
       final response = await http.get(url);
       final csvString = response.body;
       final data = csv2json(csvString);
-      print(data);
-
+      // print(csvString);
       return data;
     } catch (e) {
       print(e);
       return {};
     }
   }
+
+  static Future<ContaminantData> fetchLeadData(
+    double latitude,
+    double longitude, {
+    int radiusMiles = 10,
+  }) async {
+    final baseUrl = 'https://www.waterqualitydata.us/wqx3/Result/search';
+    final locationString = 'within=$radiusMiles&lat=$latitude&long=$longitude';
+    final characteristics =
+        'characteristicName=Lead&startDateLo=06-11-2023&startDateHi=06-11-2025';
+    final url = Uri.parse(
+      '$baseUrl?$locationString&$characteristics&mimeType=csv&dataProfile=fullPhysChem&providers=NWIS&providers=STORET',
+    );
+    print('Fetching Lead data from: $url');
+    try {
+      final response = await http.get(url);
+      final csvString = response.body;
+      final data = csv2json(csvString);
+      // print(data);
+      return data;
+    } catch (e) {
+      print(e);
+      return {};
+    }
+  }
+
+  // TODO: More contaminant fetchers
 }
