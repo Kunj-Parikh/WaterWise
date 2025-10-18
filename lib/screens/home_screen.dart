@@ -785,7 +785,14 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                                     final url = Uri.parse(
                                       'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
                                     );
-                                    final response = await http.get(url);
+                                    final headers = {
+                                      'User-Agent': 'WaterWise/1.0',
+                                    };
+                                    final response = await http.get(
+                                      url,
+                                      headers: headers,
+                                    );
+                                    print(response);
                                     if (response.statusCode == 200) {
                                       final List data = jsonDecode(
                                         response.body,
