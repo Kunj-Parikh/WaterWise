@@ -12,13 +12,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:async';
 import '../widgets/contaminant_sparkline.dart';
+import 'welcome.dart';
 import '../widgets/location_summary_card.dart';
 import '../widgets/alert_badge.dart';
 import '../widgets/contaminant_heatmap.dart';
 import 'comparison_dashboard.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
-import '../widgets/custom_tooltip.dart';
 
 class WaterQualityHomePage extends StatefulWidget {
   const WaterQualityHomePage({super.key});
@@ -27,6 +27,7 @@ class WaterQualityHomePage extends StatefulWidget {
 }
 
 class WaterQualityHomePageState extends State<WaterQualityHomePage> {
+  bool _showWelcome = true;
   final Map<String, String> parameterNames = {
     '52644': 'PFOS',
     '53590': 'PFOS',
@@ -69,11 +70,11 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   LatLng? _newPosition;
 
   List<double> contaminantLimits = <double>[
-    10.0, // pfoa
-    10.0, // pfos
-    10_000_000.0, // nitrates
-    100.0, // phosphates
-    5_000.0, // lead
+    10.0,
+    10.0,
+    10_000_000.0,
+    100.0,
+    5_000.0,
   ]; // ppt
   List<Marker> _markers = [];
   List<dynamic> results = [];
@@ -176,7 +177,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
       contaminants: [
         ContaminantType.PFOAion,
         ContaminantType.Lead,
-        // ContaminantType.Nitrate,
+        ContaminantType.Nitrate,
         ContaminantType.Arsenic,
       ],
     );
@@ -186,7 +187,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
         WaterDataService.getContaminantData([
               ContaminantType.PFOAion,
               ContaminantType.Lead,
-              // ContaminantType.Nitrate,
+              ContaminantType.Nitrate,
               ContaminantType.Arsenic,
             ])
             as Map<ContaminantType, dynamic>;
@@ -376,7 +377,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                child: CustomTooltip(
+                child: _CustomTooltip(
                   info: info,
                   onTap: () {
                     setState(() {
@@ -771,8 +772,9 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                               },
                               // callback every time user types
                               suggestionsCallback: (pattern) async {
-                                if (_debounce?.isActive ?? false)
+                                if (_debounce?.isActive ?? false) {
                                   _debounce!.cancel();
+                                }
                                 final completer =
                                     Completer<List<Map<String, dynamic>>>();
                                 _debounce = Timer(
@@ -785,14 +787,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                                     final url = Uri.parse(
                                       'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
                                     );
-                                    final headers = {
-                                      'User-Agent': 'WaterWise/1.0',
-                                    };
-                                    final response = await http.get(
-                                      url,
-                                      headers: headers,
-                                    );
-                                    print(response);
+                                    final response = await http.get(url);
                                     if (response.statusCode == 200) {
                                       final List data = jsonDecode(
                                         response.body,
@@ -1004,8 +999,9 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                                       ),
                                     ),
                                 suggestionsCallback: (pattern) async {
-                                  if (_debounce?.isActive ?? false)
+                                  if (_debounce?.isActive ?? false) {
                                     _debounce!.cancel();
+                                  }
                                   final completer =
                                       Completer<List<Map<String, dynamic>>>();
                                   _debounce = Timer(
@@ -1157,6 +1153,15 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                     Expanded(child: Center(child: CircularProgressIndicator()))
                   else
                     Expanded(child: Stack(children: [buildMap()])),
+
+                  if (_showWelcome)
+                    Welcome(
+                      onClose: () {
+                        setState(() {
+                          _showWelcome = false;
+                        });
+                      },
+                    ),
                 ],
               ),
             ),
@@ -1336,5 +1341,137 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
       if (vals == null || vals.isEmpty) return 0.0;
       return vals.reduce((a, b) => a > b ? a : b);
     }).toList();
+  }
+}
+
+class _CustomTooltip extends StatefulWidget {
+  final String info;
+  final Widget child;
+  final VoidCallback? onTap;
+  const _CustomTooltip({required this.info, required this.child, this.onTap});
+
+  @override
+  State<_CustomTooltip> createState() => _CustomTooltipState();
+}
+
+class _CustomTooltipState extends State<_CustomTooltip> {
+  OverlayEntry? _overlayEntry;
+  bool _isHovering = false;
+  bool _overlayVisible = false;
+
+  void _showOverlay(BuildContext context, Offset position) {
+    if (_overlayVisible) return;
+    _overlayVisible = true;
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        left: position.dx + 50,
+        top: position.dy - 12,
+        child: MouseRegion(
+          onEnter: (_) {
+            _isHovering = true;
+          },
+          onExit: (_) {
+            _isHovering = false;
+            _removeOverlay();
+          },
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 8,
+                    offset: Offset(2, 2),
+                  ),
+                ],
+              ),
+              child: _buildRichContent(),
+            ),
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _removeOverlay() {
+    if (!_overlayVisible) return;
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    _overlayVisible = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (event) {
+        _isHovering = true;
+        final renderBox = context.findRenderObject() as RenderBox;
+        final offset = renderBox.localToGlobal(Offset.zero);
+        _showOverlay(context, offset);
+      },
+      onExit: (event) {
+        _isHovering = false;
+        // Delay removal to allow entering overlay
+        Future.delayed(Duration(milliseconds: 100), () {
+          if (!_isHovering) _removeOverlay();
+        });
+      },
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (details) {
+          if (widget.onTap != null) {
+            widget.onTap!();
+          } else {
+            showDialog(
+              context: context,
+              builder: (ctx) {
+                return AlertDialog(
+                  content: _buildRichContent(),
+                  contentPadding: EdgeInsets.all(12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
+              },
+            );
+          }
+        },
+        child: widget.child,
+      ),
+    );
+  }
+
+  Widget _buildRichContent() {
+    final lines = widget.info.split('\n\n');
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: lines.map((line) {
+        if (line.startsWith('[BOLD]') && line.endsWith('[/BOLD]')) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              line.replaceAll('[BOLD]', '').replaceAll('[/BOLD]', ''),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(line, style: TextStyle(fontSize: 13)),
+        );
+      }).toList(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _removeOverlay();
+    super.dispose();
   }
 }

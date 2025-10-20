@@ -4,7 +4,7 @@ import 'package:csv2json/csv2json.dart';
 // Enum for contaminants
 enum ContaminantType { PFOAion, Lead, Nitrate, Phosphate, Arsenic }
 
-typedef ContaminantData = dynamic; 
+typedef ContaminantData = dynamic;
 
 class WaterDataService {
   // Map to store data for each contaminant
@@ -60,11 +60,12 @@ class WaterDataService {
           );
           break;
         case ContaminantType.Phosphate:
-          _contaminantData[ContaminantType.Phosphate] = await fetchPhosphateData(
-            latitude,
-            longitude,
-            radiusMiles: radiusMiles,
-          );
+          _contaminantData[ContaminantType.Phosphate] =
+              await fetchPhosphateData(
+                latitude,
+                longitude,
+                radiusMiles: radiusMiles,
+              );
           break;
         case ContaminantType.Arsenic:
           _contaminantData[ContaminantType.Arsenic] = await fetchArsenicData(
