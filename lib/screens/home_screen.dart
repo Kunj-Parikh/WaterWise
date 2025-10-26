@@ -18,6 +18,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
 import '../widgets/custom_tooltip.dart';
 import '../widgets/search_filter_panel.dart';
+import '../pages/info_page.dart';
 
 double _radius = 20.0; // miles, default value
 
@@ -723,6 +724,15 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                         fontFamily: 'Inter',
                       ),
                     ),
+                    SizedBox(width: 12),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const InfoPage()),
+                        );
+                      },
+                      child: Text('Pollutant Info', style: TextStyle(color: Colors.black)),
+                    )
                   ],
                 ),
               ),

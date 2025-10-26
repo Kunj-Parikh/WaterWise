@@ -26,6 +26,7 @@ class Welcome extends StatelessWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.max,
                         children: [
+
                           const Text(
                             'Welcome to WaterWise',
                             style: TextStyle(
@@ -35,8 +36,11 @@ class Welcome extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           const Text(
-                            'Find out about nearby water quality data of PFOA, lead, nitrate, and aresnic. Start by clicking "My Location "',
+                            'Find out about nearby water quality data of PFOA, lead, nitrate, and arsenic. Start by clicking "My Location "',
                             textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 20,
+                            )
                           ),
                           const SizedBox(height: 20),
                           ElevatedButton(
