@@ -3,7 +3,7 @@ import 'screens/home_screen.dart';
 import 'screens/welcome.dart';
 
 void main() {
-  runApp(WaterWiseApp());
+  runApp(const WaterWiseApp());
 }
 
 class WaterWiseApp extends StatefulWidget {
@@ -31,9 +31,28 @@ class _WaterWiseAppState extends State<WaterWiseApp> {
         primarySwatch: Colors.teal,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: _showWelcome
-          ? Welcome(onClose: _closeWelcome)
-          : WaterQualityHomePage(),
+
+      home: Scaffold(
+        extendBodyBehindAppBar: true,
+        body: Stack(
+          alignment: Alignment.center,
+          children: [
+            const WaterQualityHomePage(),
+
+            if (_showWelcome)
+              AnimatedOpacity(
+                duration: const Duration(milliseconds: 500),
+                opacity: _showWelcome ? 1 : 0,
+                child: Positioned.fill(
+                  child: Container(
+                    color: Colors.black.withOpacity(0.5),
+                    child: Center(child: Welcome(onClose: _closeWelcome)),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

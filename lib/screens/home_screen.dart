@@ -822,8 +822,9 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                       }
                     },
                     emptyBuilder: (context) {
-                      if (_searchController.text.trim().isEmpty)
+                      if (_searchController.text.trim().isEmpty) {
                         return SizedBox.shrink();
+                      }
                       return const ListTile(title: Text('No items found!'));
                     },
                   ),
@@ -834,8 +835,9 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                         permission == LocationPermission.deniedForever) {
                       permission = await Geolocator.requestPermission();
                       if (permission == LocationPermission.denied ||
-                          permission == LocationPermission.deniedForever)
+                          permission == LocationPermission.deniedForever) {
                         return;
+                      }
                     }
                     final LocationSettings locationSettings = LocationSettings(
                       accuracy: LocationAccuracy.high,
