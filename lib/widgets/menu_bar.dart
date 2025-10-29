@@ -9,6 +9,24 @@ const Map<String, String> contaminantOptions = {
   'Arsenic': 'Arsenic',
 };
 
+// Icons for each contaminant
+const Map<String, IconData> contaminantIcons = {
+  'Every Contaminant': Icons.water_drop,
+  'PFOA ion': Icons.science,
+  'Lead': Icons.dangerous,
+  'Nitrate': Icons.agriculture,
+  'Arsenic': Icons.landscape,
+};
+
+// Colors for each contaminant
+const Map<String, Color> contaminantMenuColors = {
+  'Every Contaminant': Colors.teal,
+  'PFOA ion': Colors.blue,
+  'Lead': Colors.red,
+  'Nitrate': Colors.orange,
+  'Arsenic': Colors.green,
+};
+
 class DropDown extends StatelessWidget {
   final String? value;
   final ValueChanged<String?>? onChanged;
@@ -25,12 +43,19 @@ class DropDown extends StatelessWidget {
         .key;
     return DropdownButton<String>(
       value: displayValue,
-      elevation: 16,
-      style: const TextStyle(color: Color.fromARGB(255, 10, 3, 116)),
-      underline: Container(
-        height: 2,
-        color: const Color.fromARGB(255, 70, 2, 255),
+      isExpanded: true,
+      elevation: 8,
+      style: const TextStyle(
+        color: Colors.black87,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
       ),
+      underline: Container(
+        height: 0,
+      ),
+      icon: Icon(Icons.arrow_drop_down, color: Colors.teal),
+      dropdownColor: Colors.white,
+      borderRadius: BorderRadius.circular(8),
       onChanged: (String? label) {
         if (onChanged != null) {
           onChanged!(contaminantOptions[label!]);
@@ -39,7 +64,24 @@ class DropDown extends StatelessWidget {
       items: contaminantOptions.keys.map<DropdownMenuItem<String>>((
         String label,
       ) {
-        return DropdownMenuItem<String>(value: label, child: Text(label));
+        final icon = contaminantIcons[label] ?? Icons.water_drop;
+        final color = contaminantMenuColors[label] ?? Colors.teal;
+        return DropdownMenuItem<String>(
+          value: label,
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: color),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(color: color),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        );
       }).toList(),
     );
   }

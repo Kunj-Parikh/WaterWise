@@ -23,6 +23,7 @@ import '../widgets/home_info_panel.dart';
 import '../widgets/contaminant_info_tooltip.dart';
 import '../widgets/contaminant_info_card.dart';
 import '../widgets/heatmap_legend.dart';
+import '../widgets/data_source_info.dart';
 
 double _radius = 20.0; // miles, default value
 
@@ -476,6 +477,13 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                     right: 20,
                     child: HeatmapLegend(),
                   ),
+                // Data source info
+                if (!_showHeatmap)
+                  Positioned(
+                    bottom: 20,
+                    right: 20,
+                    child: DataSourceInfo(),
+                  ),
                 // Floating action buttons
                 Positioned(
                   top: 80,
@@ -856,34 +864,77 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
       appBar: isDesktop
           ? AppBar(
               backgroundColor: Colors.white,
+              elevation: 2,
               title: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 80),
                 child: Row(
                   children: [
-                    Icon(Icons.water_drop_sharp, color: Colors.blue, size: 28),
-                    SizedBox(width: 4),
+                    Container(
+                      padding: EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.water_drop_sharp, color: Colors.teal.shade700, size: 28),
+                    ),
+                    SizedBox(width: 12),
                     Text(
                       'WaterWise',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal.shade900,
                         fontFamily: 'Inter',
                       ),
                     ),
-                    SizedBox(width: 12),
-                    TextButton(
+                    SizedBox(width: 24),
+                    TextButton.icon(
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const InfoPage()),
                         );
                       },
-                      child: Text('Pollutant Info', style: TextStyle(color: Colors.black)),
-                    )
+                      icon: Icon(Icons.info_outline, color: Colors.teal.shade700, size: 20),
+                      label: Text(
+                        'Contaminant Info',
+                        style: TextStyle(
+                          color: Colors.teal.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.teal.shade50,
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             )
-          : AppBar(title: Text('WaterWise')),
+          : AppBar(
+              title: Row(
+                children: [
+                  Icon(Icons.water_drop_sharp, color: Colors.white, size: 24),
+                  SizedBox(width: 8),
+                  Text('WaterWise'),
+                ],
+              ),
+              backgroundColor: Colors.teal,
+              elevation: 2,
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.info_outline),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const InfoPage()),
+                    );
+                  },
+                ),
+              ],
+            ),
       body: isDesktop
           ? Stack(
               children: [
@@ -1044,8 +1095,44 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                 if (loading)
                   Positioned.fill(
                     child: Container(
-                      color: Colors.black45,
-                      child: Center(child: CircularProgressIndicator()),
+                      color: Colors.black54,
+                      child: Center(
+                        child: Card(
+                          elevation: 8,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
+                                  strokeWidth: 3,
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'Loading water quality data...',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Fetching contaminant information',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
               ],
