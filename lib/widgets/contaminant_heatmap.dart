@@ -36,7 +36,7 @@ class ContaminantHeatmap extends StatelessWidget {
     print('points length: ${points.length}, values length: ${values.length}');
     
     // Enhanced gradient with more distinct colors
-    final customGradient = {
+    final Map<double, Color> customGradient = {
       0.0: Colors.transparent,
       0.2: Colors.blue.withOpacity(0.3),
       0.4: Colors.green.withOpacity(0.5),
