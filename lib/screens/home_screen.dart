@@ -19,6 +19,8 @@ import 'dart:io' show Platform;
 import '../widgets/custom_tooltip.dart';
 import '../widgets/search_filter_panel.dart';
 import '../pages/info_page.dart';
+import '../widgets/home_info_panel.dart';
+import '../widgets/contaminant_info_tooltip.dart';
 
 double _radius = 20.0; // miles, default value
 
@@ -82,6 +84,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   Map<String, dynamic>? _selectedLocation;
   bool _showSidebar = false;
   bool _showHeatmap = false;
+  bool _showInfoPanel = true;
 
   // ignore: unused_field, prefer_final_fields
   String _searchQuery = '';
@@ -439,6 +442,18 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     if (isDesktop) {
       return Row(
         children: [
+          // Info panel on the left
+          if (_showInfoPanel && !_showSidebar)
+            Container(
+              width: 350,
+              color: Colors.white,
+              child: SingleChildScrollView(
+                child: HomeInfoPanel(
+                  locationsCount: _markers.length - 1, // exclude current location marker
+                  contaminantsTracked: 5,
+                ),
+              ),
+            ),
           Expanded(
             flex: _showSidebar && _selectedLocation != null ? 3 : 2,
             child: Stack(
@@ -452,51 +467,68 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                   onMapMoved: _updateMapCenter,
                   extraLayers: heatmapLayer,
                 ),
-                // Floating action button for dashboard
+                // Floating action buttons
                 Positioned(
                   top: 80,
                   right: 16,
-                  child: FloatingActionButton.extended(
-                    heroTag: 'dashboard',
-                    backgroundColor: Colors.teal,
-                    icon: Icon(Icons.dashboard),
-                    label: Text('Compare'),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => ComparisonDashboard(
-                            contaminantTrends: _buildTrends(),
-                            dates: _buildDates(),
-                            colors: [
-                              Colors.teal,
-                              Colors.orange,
-                              Colors.red,
-                              Colors.blue,
-                            ],
-                            contaminants: parameterNames.values
-                                .toSet()
-                                .toList(),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Positioned(
-                  top: 80,
-                  right: 16,
-                  child: FloatingActionButton.extended(
-                    heroTag: 'heatmap',
-                    backgroundColor: Colors.deepOrange,
-                    icon: Icon(Icons.thermostat),
-                    label: Text('Heatmap'),
-                    onPressed: () {
-                      setState(() {
-                        _showSidebar = false;
-                        _selectedLocation = null;
-                        _showHeatmap = !_showHeatmap;
-                      });
-                    },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      FloatingActionButton.extended(
+                        heroTag: 'info',
+                        backgroundColor: _showInfoPanel ? Colors.blue.shade700 : Colors.blue,
+                        icon: Icon(_showInfoPanel ? Icons.close : Icons.info),
+                        label: Text(_showInfoPanel ? 'Hide Info' : 'Show Info'),
+                        onPressed: () {
+                          setState(() {
+                            _showInfoPanel = !_showInfoPanel;
+                            if (_showInfoPanel) {
+                              _showSidebar = false;
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      FloatingActionButton.extended(
+                        heroTag: 'dashboard',
+                        backgroundColor: Colors.teal,
+                        icon: Icon(Icons.dashboard),
+                        label: Text('Compare'),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ComparisonDashboard(
+                                contaminantTrends: _buildTrends(),
+                                dates: _buildDates(),
+                                colors: [
+                                  Colors.teal,
+                                  Colors.orange,
+                                  Colors.red,
+                                  Colors.blue,
+                                ],
+                                contaminants: parameterNames.values
+                                    .toSet()
+                                    .toList(),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      FloatingActionButton.extended(
+                        heroTag: 'heatmap',
+                        backgroundColor: _showHeatmap ? Colors.deepOrange.shade700 : Colors.deepOrange,
+                        icon: Icon(_showHeatmap ? Icons.thermostat_auto : Icons.thermostat),
+                        label: Text(_showHeatmap ? 'Hide Heatmap' : 'Heatmap'),
+                        onPressed: () {
+                          setState(() {
+                            _showSidebar = false;
+                            _selectedLocation = null;
+                            _showHeatmap = !_showHeatmap;
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -860,37 +892,36 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                   filterRow: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 24),
                     child: Container(
-                      height: 36,
-                      width: 400,
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black26,
                             blurRadius: 8,
-                            offset: Offset(0, 0),
+                            offset: Offset(0, 2),
                           ),
                         ],
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 0,
-                        ),
-                        child: Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                'Choose contaminant:',
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
+                      child: Row(
+                        children: [
+                          Icon(Icons.filter_list, color: Colors.teal, size: 20),
+                          SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              'Filter by contaminant:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
                               ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
-                            SizedBox(width: 8),
-                            Expanded(child: buildMenuBar()),
-                          ],
-                        ),
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(child: buildMenuBar()),
+                        ],
                       ),
                     ),
                   ),
