@@ -21,6 +21,8 @@ import '../widgets/search_filter_panel.dart';
 import '../pages/info_page.dart';
 import '../widgets/home_info_panel.dart';
 import '../widgets/contaminant_info_tooltip.dart';
+import '../widgets/contaminant_info_card.dart';
+import '../widgets/heatmap_legend.dart';
 
 double _radius = 20.0; // miles, default value
 
@@ -467,6 +469,13 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                   onMapMoved: _updateMapCenter,
                   extraLayers: heatmapLayer,
                 ),
+                // Heatmap legend
+                if (_showHeatmap)
+                  Positioned(
+                    bottom: 20,
+                    right: 20,
+                    child: HeatmapLegend(),
+                  ),
                 // Floating action buttons
                 Positioned(
                   top: 80,
@@ -537,18 +546,44 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           if (_showSidebar && _selectedLocation != null)
             Container(
               width: 480, // wider sidebar
-              color: Colors.white,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    offset: Offset(-2, 0),
+                  ),
+                ],
+              ),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          _showSidebar = false;
-                        });
-                      },
+                    Container(
+                      color: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.close),
+                            onPressed: () {
+                              setState(() {
+                                _showSidebar = false;
+                              });
+                            },
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Location Details',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     LocationSummaryCard(
                       locationName: _selectedLocation?['Location_Name'] ?? '',
@@ -561,34 +596,57 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                       ),
                       contaminantColors: _contaminantColors(),
                     ),
-                    if (_buildSparklines(_selectedLocation).isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.vertical,
-                          child: Column(
-                            children: _buildSparklines(_selectedLocation)
-                                .map(
-                                  (w) => Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0,
-                                    ),
-                                    child: w,
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                      ),
                     if (_hasAlert(_selectedLocation))
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                         child: AlertBadge(
                           show: true,
-                          label: 'High Contaminant!',
+                          label: 'High Contaminant Level Detected!',
                           color: Colors.red,
                         ),
                       ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Historical Trends',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (_buildSparklines(_selectedLocation).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Column(
+                          children: _buildSparklines(_selectedLocation)
+                              .map(
+                                (w) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4.0,
+                                  ),
+                                  child: w,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Learn About Contaminants',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    ContaminantInfoCard.forPFOA(),
+                    ContaminantInfoCard.forPFOS(),
+                    ContaminantInfoCard.forLead(),
+                    ContaminantInfoCard.forNitrate(),
+                    ContaminantInfoCard.forArsenic(),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -609,6 +667,13 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           onMapMoved: _updateMapCenter,
           extraLayers: heatmapLayer,
         ),
+        // Heatmap legend for mobile
+        if (_showHeatmap)
+          Positioned(
+            bottom: 20,
+            left: 20,
+            child: HeatmapLegend(),
+          ),
         Positioned(
           top: 80,
           right: 16,
@@ -661,18 +726,44 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             child: AnimatedContainer(
               duration: Duration(milliseconds: 300),
               width: 350,
-              color: Colors.white,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(-2, 0),
+                  ),
+                ],
+              ),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          _showSidebar = false;
-                        });
-                      },
+                    Container(
+                      color: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.close),
+                            onPressed: () {
+                              setState(() {
+                                _showSidebar = false;
+                              });
+                            },
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Location Details',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     LocationSummaryCard(
                       locationName: _selectedLocation?['Location_Name'] ?? '',
@@ -685,34 +776,57 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                       ),
                       contaminantColors: _contaminantColors(),
                     ),
-                    if (_buildSparklines(_selectedLocation).isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.vertical,
-                          child: Column(
-                            children: _buildSparklines(_selectedLocation)
-                                .map(
-                                  (w) => Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0,
-                                    ),
-                                    child: w,
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                      ),
                     if (_hasAlert(_selectedLocation))
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                         child: AlertBadge(
                           show: true,
-                          label: 'High Contaminant!',
+                          label: 'High Contaminant Level!',
                           color: Colors.red,
                         ),
                       ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Historical Trends',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (_buildSparklines(_selectedLocation).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Column(
+                          children: _buildSparklines(_selectedLocation)
+                              .map(
+                                (w) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4.0,
+                                  ),
+                                  child: w,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Learn About Contaminants',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    ContaminantInfoCard.forPFOA(),
+                    ContaminantInfoCard.forPFOS(),
+                    ContaminantInfoCard.forLead(),
+                    ContaminantInfoCard.forNitrate(),
+                    ContaminantInfoCard.forArsenic(),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
