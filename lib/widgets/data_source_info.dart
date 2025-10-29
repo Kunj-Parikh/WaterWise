@@ -9,11 +9,11 @@ class DataSourceInfo extends StatelessWidget {
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.source, color: Colors.teal, size: 16),
+            const Icon(Icons.source, color: Colors.teal, size: 16),
             const SizedBox(width: 8),
             Text(
               'Data Source: EPA Water Quality Portal',

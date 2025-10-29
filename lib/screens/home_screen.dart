@@ -870,14 +870,14 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                 child: Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.all(8),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Colors.teal.shade50,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(Icons.water_drop_sharp, color: Colors.teal.shade700, size: 28),
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Text(
                       'WaterWise',
                       style: TextStyle(
@@ -887,7 +887,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                         fontFamily: 'Inter',
                       ),
                     ),
-                    SizedBox(width: 24),
+                    const SizedBox(width: 24),
                     TextButton.icon(
                       onPressed: () {
                         Navigator.of(context).push(
@@ -904,7 +904,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                       ),
                       style: TextButton.styleFrom(
                         backgroundColor: Colors.teal.shade50,
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -917,16 +917,16 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           : AppBar(
               title: Row(
                 children: [
-                  Icon(Icons.water_drop_sharp, color: Colors.white, size: 24),
-                  SizedBox(width: 8),
-                  Text('WaterWise'),
+                  const Icon(Icons.water_drop_sharp, color: Colors.white, size: 24),
+                  const SizedBox(width: 8),
+                  const Text('WaterWise'),
                 ],
               ),
               backgroundColor: Colors.teal,
               elevation: 2,
               actions: [
                 IconButton(
-                  icon: Icon(Icons.info_outline),
+                  icon: const Icon(Icons.info_outline),
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const InfoPage()),
@@ -1103,11 +1103,11 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Padding(
-                            padding: EdgeInsets.all(32),
+                            padding: const EdgeInsets.all(32),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                CircularProgressIndicator(
+                                const CircularProgressIndicator(
                                   valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
                                   strokeWidth: 3,
                                 ),
