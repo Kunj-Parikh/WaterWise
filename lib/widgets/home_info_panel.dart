@@ -74,7 +74,7 @@ class HomeInfoPanel extends StatelessWidget {
                   Text(
                     'Monitor water quality in your community',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 14,
                     ),
                   ),

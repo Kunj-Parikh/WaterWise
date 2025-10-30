@@ -40,12 +40,12 @@ class _WaterWiseAppState extends State<WaterWiseApp> {
             const WaterQualityHomePage(),
 
             if (_showWelcome)
-              AnimatedOpacity(
-                duration: const Duration(milliseconds: 500),
-                opacity: _showWelcome ? 1 : 0,
-                child: Positioned.fill(
+              Positioned.fill(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 500),
+                  opacity: _showWelcome ? 1 : 0,
                   child: Container(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     child: Center(child: Welcome(onClose: _closeWelcome)),
                   ),
                 ),

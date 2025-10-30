@@ -19,7 +19,6 @@ class ContaminantSparkline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate trend (increasing, decreasing, stable)
     String trend = 'stable';
     IconData trendIcon = Icons.trending_flat;
     if (values.length >= 2) {
@@ -48,7 +47,7 @@ class ContaminantSparkline extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
+                    color: color.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
@@ -110,7 +109,7 @@ class ContaminantSparkline extends StatelessWidget {
                             ),
                             belowBarData: BarAreaData(
                               show: true,
-                              color: color.withOpacity(0.15),
+                              color: color.withValues(alpha: 0.15),
                             ),
                           ),
                         ],

@@ -21,7 +21,7 @@ class ContaminantInfoTooltip extends StatelessWidget {
       padding: EdgeInsets.all(12),
       margin: EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.95),
+        color: color.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(

@@ -34,17 +34,16 @@ class ContaminantHeatmap extends StatelessWidget {
       );
     }
     print('points length: ${points.length}, values length: ${values.length}');
-    
-    // Enhanced gradient with more distinct colors
-    final customGradient = {
-      0.0: Colors.transparent,
-      0.2: Colors.blue.withOpacity(0.3),
-      0.4: Colors.green.withOpacity(0.5),
-      0.6: Colors.yellow.withOpacity(0.6),
-      0.8: Colors.orange.withOpacity(0.7),
-      1.0: Colors.red.withOpacity(0.8),
+
+    final customGradient = <double, MaterialColor>{
+      0.0: Colors.blue,
+      0.2: Colors.blue,
+      0.4: Colors.green,
+      0.6: Colors.yellow,
+      0.8: Colors.orange,
+      1.0: Colors.red,
     };
-    
+
     return Builder(
       builder: (context) {
         return HeatMapLayer(
@@ -68,4 +67,3 @@ class ContaminantHeatmap extends StatelessWidget {
     );
   }
 }
-

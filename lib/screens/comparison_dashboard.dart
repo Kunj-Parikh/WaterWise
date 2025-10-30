@@ -228,7 +228,7 @@ class _ComparisonDashboardState extends State<ComparisonDashboard> {
                                           belowBarData: BarAreaData(
                                             show: true,
                                             color: widget.colors[i % widget.colors.length]
-                                                .withOpacity(0.1),
+                                                .withValues(alpha: 0.1),
                                           ),
                                         ),
                                     ],

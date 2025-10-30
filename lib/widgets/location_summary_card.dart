@@ -44,7 +44,7 @@ class LocationSummaryCard extends StatelessWidget {
                 colors: [
                   contaminantColors[contaminant] ?? Colors.teal,
                   (contaminantColors[contaminant] ?? Colors.teal)
-                      .withOpacity(0.6),
+                      .withValues(alpha: 0.6),
                 ],
               ),
             ),

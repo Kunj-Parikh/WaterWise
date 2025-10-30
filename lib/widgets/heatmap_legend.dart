@@ -50,7 +50,7 @@ class HeatmapLegend extends StatelessWidget {
             width: 20,
             height: 12,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.7),
+              color: color.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: color, width: 1),
             ),
