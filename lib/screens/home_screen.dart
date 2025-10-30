@@ -14,11 +14,14 @@ import '../widgets/location_summary_card.dart';
 import '../widgets/alert_badge.dart';
 import '../widgets/contaminant_heatmap.dart';
 import 'comparison_dashboard.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:io' show Platform;
 import '../widgets/custom_tooltip.dart';
 import '../widgets/search_filter_panel.dart';
 import '../pages/info_page.dart';
+import '../widgets/home_info_panel.dart';
+// import '../widgets/contaminant_info_tooltip.dart';
+import '../widgets/contaminant_info_card.dart';
+import '../widgets/heatmap_legend.dart';
+import '../widgets/data_source_info.dart';
 
 double _radius = 20.0; // miles, default value
 
@@ -82,6 +85,16 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
   Map<String, dynamic>? _selectedLocation;
   bool _showSidebar = false;
   bool _showHeatmap = false;
+  bool _showInfoPanel = true;
+
+  final List<String> _defaultContaminants = [
+    'PFOA ion',
+    'PFOS',
+    'Nitrate',
+    'Phosphates',
+    'Lead',
+    'Arsenic',
+  ];
 
   // ignore: unused_field, prefer_final_fields
   String _searchQuery = '';
@@ -255,7 +268,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
         );
         return dA.compareTo(dB);
       });
-      final closest = validLocations.take(50).toList();
+      final closest = validLocations.take(75).toList();
       // Now, for each of the closest locations, aggregate all contaminant records
       final Map<String, List<dynamic>> closestByLocation = {};
       for (final item in closest) {
@@ -421,9 +434,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     if (_currentPosition == null) {
       return Center(child: CircularProgressIndicator());
     }
-    // Use kIsWeb to avoid Platform on web
-    final isDesktop =
-        !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
     final heatmapPoints = _buildHeatmapPoints();
     final heatmapValues = _buildHeatmapValues(heatmapPoints);
     final List<Widget> heatmapLayer = _showHeatmap
@@ -439,6 +450,19 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     if (isDesktop) {
       return Row(
         children: [
+          // Info panel on the left
+          if (_showInfoPanel && !_showSidebar)
+            Container(
+              width: 350,
+              color: Colors.white,
+              child: SingleChildScrollView(
+                child: HomeInfoPanel(
+                  locationsCount:
+                      _markers.length - 1, // exclude current location marker
+                  contaminantsTracked: 5,
+                ),
+              ),
+            ),
           Expanded(
             flex: _showSidebar && _selectedLocation != null ? 3 : 2,
             child: Stack(
@@ -452,51 +476,83 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                   onMapMoved: _updateMapCenter,
                   extraLayers: heatmapLayer,
                 ),
-                // Floating action button for dashboard
+                // Heatmap legend
+                if (_showHeatmap)
+                  Positioned(bottom: 20, right: 20, child: HeatmapLegend()),
+                // Data source info (shifted left to avoid overlapping bottom-right map controls)
+                if (!_showHeatmap)
+                  Positioned(bottom: 20, right: 120, child: DataSourceInfo()),
+                // Floating action buttons
                 Positioned(
                   top: 80,
                   right: 16,
-                  child: FloatingActionButton.extended(
-                    heroTag: 'dashboard',
-                    backgroundColor: Colors.teal,
-                    icon: Icon(Icons.dashboard),
-                    label: Text('Compare'),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => ComparisonDashboard(
-                            contaminantTrends: _buildTrends(),
-                            dates: _buildDates(),
-                            colors: [
-                              Colors.teal,
-                              Colors.orange,
-                              Colors.red,
-                              Colors.blue,
-                            ],
-                            contaminants: parameterNames.values
-                                .toSet()
-                                .toList(),
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      FloatingActionButton.extended(
+                        heroTag: 'info',
+                        backgroundColor: _showInfoPanel
+                            ? Colors.blue.shade700
+                            : Colors.blue,
+                        icon: Icon(_showInfoPanel ? Icons.close : Icons.info),
+                        label: Text(
+                          _showInfoPanel ? 'Hide Info' : 'Show Info',
+                          style: TextStyle(color: Colors.white),
                         ),
-                      );
-                    },
-                  ),
-                ),
-                Positioned(
-                  top: 80,
-                  right: 16,
-                  child: FloatingActionButton.extended(
-                    heroTag: 'heatmap',
-                    backgroundColor: Colors.deepOrange,
-                    icon: Icon(Icons.thermostat),
-                    label: Text('Heatmap'),
-                    onPressed: () {
-                      setState(() {
-                        _showSidebar = false;
-                        _selectedLocation = null;
-                        _showHeatmap = !_showHeatmap;
-                      });
-                    },
+                        onPressed: () {
+                          setState(() {
+                            _showInfoPanel = !_showInfoPanel;
+                            if (_showInfoPanel) {
+                              _showSidebar = false;
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      FloatingActionButton.extended(
+                        heroTag: 'dashboard',
+                        backgroundColor: Colors.teal,
+                        icon: Icon(Icons.dashboard),
+                        label: Text('Compare'),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ComparisonDashboard(
+                                contaminantTrends: _buildTrends(),
+                                dates: _buildDates(),
+                                colors: [
+                                  Colors.teal,
+                                  Colors.orange,
+                                  Colors.red,
+                                  Colors.blue,
+                                ],
+                                contaminants: _defaultContaminants,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      FloatingActionButton.extended(
+                        heroTag: 'heatmap',
+                        backgroundColor: _showHeatmap
+                            ? Colors.deepOrange.shade700
+                            : Colors.deepOrange,
+                        icon: Icon(
+                          _showHeatmap
+                              ? Icons.thermostat_auto
+                              : Icons.thermostat,
+                        ),
+                        label: Text(_showHeatmap ? 'Hide Heatmap' : 'Heatmap'),
+                        onPressed: () {
+                          setState(() {
+                            _showSidebar = false;
+                            _selectedLocation = null;
+                            _showHeatmap = !_showHeatmap;
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -505,18 +561,44 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           if (_showSidebar && _selectedLocation != null)
             Container(
               width: 480, // wider sidebar
-              color: Colors.white,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 10,
+                    offset: Offset(-2, 0),
+                  ),
+                ],
+              ),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          _showSidebar = false;
-                        });
-                      },
+                    Container(
+                      color: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.close),
+                            onPressed: () {
+                              setState(() {
+                                _showSidebar = false;
+                              });
+                            },
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Location Details',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     LocationSummaryCard(
                       locationName: _selectedLocation?['Location_Name'] ?? '',
@@ -529,34 +611,60 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                       ),
                       contaminantColors: _contaminantColors(),
                     ),
-                    if (_buildSparklines(_selectedLocation).isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.vertical,
-                          child: Column(
-                            children: _buildSparklines(_selectedLocation)
-                                .map(
-                                  (w) => Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0,
-                                    ),
-                                    child: w,
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                      ),
                     if (_hasAlert(_selectedLocation))
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
                         child: AlertBadge(
                           show: true,
-                          label: 'High Contaminant!',
+                          label: 'High Contaminant Level Detected!',
                           color: Colors.red,
                         ),
                       ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Historical Trends',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (_buildSparklines(_selectedLocation).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Column(
+                          children: _buildSparklines(_selectedLocation)
+                              .map(
+                                (w) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4.0,
+                                  ),
+                                  child: w,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Learn About Contaminants',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    ContaminantInfoCard.forPFOA(),
+                    ContaminantInfoCard.forPFOS(),
+                    ContaminantInfoCard.forLead(),
+                    ContaminantInfoCard.forNitrate(),
+                    ContaminantInfoCard.forArsenic(),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -577,6 +685,9 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           onMapMoved: _updateMapCenter,
           extraLayers: heatmapLayer,
         ),
+        // Heatmap legend for mobile
+        if (_showHeatmap)
+          Positioned(bottom: 20, left: 20, child: HeatmapLegend()),
         Positioned(
           top: 80,
           right: 16,
@@ -584,7 +695,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             heroTag: 'dashboard',
             backgroundColor: Colors.teal,
             icon: Icon(Icons.dashboard),
-            label: Text('Compare'),
+            label: Text('Compare', style: TextStyle(color: Colors.white)),
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -597,7 +708,7 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                       Colors.red,
                       Colors.blue,
                     ],
-                    contaminants: parameterNames.values.toSet().toList(),
+                    contaminants: _defaultContaminants,
                   ),
                 ),
               );
@@ -629,18 +740,44 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
             child: AnimatedContainer(
               duration: Duration(milliseconds: 300),
               width: 350,
-              color: Colors.white,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 10,
+                    offset: Offset(-2, 0),
+                  ),
+                ],
+              ),
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    IconButton(
-                      icon: Icon(Icons.close),
-                      onPressed: () {
-                        setState(() {
-                          _showSidebar = false;
-                        });
-                      },
+                    Container(
+                      color: Colors.white,
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.close),
+                            onPressed: () {
+                              setState(() {
+                                _showSidebar = false;
+                              });
+                            },
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Location Details',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     LocationSummaryCard(
                       locationName: _selectedLocation?['Location_Name'] ?? '',
@@ -653,34 +790,60 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                       ),
                       contaminantColors: _contaminantColors(),
                     ),
-                    if (_buildSparklines(_selectedLocation).isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.vertical,
-                          child: Column(
-                            children: _buildSparklines(_selectedLocation)
-                                .map(
-                                  (w) => Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4.0,
-                                    ),
-                                    child: w,
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                      ),
                     if (_hasAlert(_selectedLocation))
                       Padding(
-                        padding: const EdgeInsets.all(8.0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
                         child: AlertBadge(
                           show: true,
-                          label: 'High Contaminant!',
+                          label: 'High Contaminant Level!',
                           color: Colors.red,
                         ),
                       ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Historical Trends',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (_buildSparklines(_selectedLocation).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Column(
+                          children: _buildSparklines(_selectedLocation)
+                              .map(
+                                (w) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4.0,
+                                  ),
+                                  child: w,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Learn About Contaminants',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    ContaminantInfoCard.forPFOA(),
+                    ContaminantInfoCard.forPFOS(),
+                    ContaminantInfoCard.forLead(),
+                    ContaminantInfoCard.forNitrate(),
+                    ContaminantInfoCard.forArsenic(),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -704,185 +867,257 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop =
-        !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+    // Treat any viewport >= 900px as 'desktop' layout so web users on wide
+    // screens see the same left sidebar as desktop users.
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
+    // Use the shared default contaminants list for comparison dashboards.
     return Scaffold(
       appBar: isDesktop
           ? AppBar(
               backgroundColor: Colors.white,
+              elevation: 2,
               title: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 80),
                 child: Row(
                   children: [
-                    Icon(Icons.water_drop_sharp, color: Colors.blue, size: 28),
-                    SizedBox(width: 4),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.water_drop_sharp,
+                        color: Colors.teal.shade700,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Text(
                       'WaterWise',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal.shade900,
                         fontFamily: 'Inter',
                       ),
                     ),
-                    SizedBox(width: 12),
-                    TextButton(
+                    const SizedBox(width: 24),
+                    TextButton.icon(
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const InfoPage()),
                         );
                       },
-                      child: Text('Pollutant Info', style: TextStyle(color: Colors.black)),
-                    )
+                      icon: Icon(
+                        Icons.info_outline,
+                        color: Colors.teal.shade700,
+                        size: 20,
+                      ),
+                      label: Text(
+                        'Contaminant Info',
+                        style: TextStyle(
+                          color: Colors.teal.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.teal.shade50,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             )
-          : AppBar(title: Text('WaterWise')),
+          : AppBar(
+              title: Row(
+                children: [
+                  const Icon(
+                    Icons.water_drop_sharp,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('WaterWise'),
+                ],
+              ),
+              backgroundColor: Colors.teal,
+              elevation: 2,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.info_outline),
+                  onPressed: () {
+                    Navigator.of(
+                      context,
+                    ).push(MaterialPageRoute(builder: (_) => const InfoPage()));
+                  },
+                ),
+              ],
+            ),
       body: isDesktop
           ? Stack(
               children: [
                 Positioned.fill(child: buildMap()),
                 // SearchFilterPanel to simplify the overlay UI
-                SearchFilterPanel(
-                  radius: _radius,
-                  onRadiusChanged: (val) => setState(() => _radius = val),
-                  onRadiusChangeEnd: (val) async {
-                    setState(() => _radius = val);
-                    await fetchLocations();
-                  },
-                  menuBar: SizedBox.shrink(),
-                  searchBox: TypeAheadField<Map<String, dynamic>>(
-                    builder: (context, controller, focusNode) {
-                      return Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 12,
-                        ),
-                        child: TextField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          decoration: InputDecoration(
-                            hintText: 'Search city, state, country, ZIP, etc.',
-                            prefixIcon: Icon(Icons.search),
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(vertical: 12),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
+                if (!(_showSidebar && _selectedLocation != null))
+                  SearchFilterPanel(
+                    radius: _radius,
+                    onRadiusChanged: (val) => setState(() => _radius = val),
+                    onRadiusChangeEnd: (val) async {
+                      setState(() => _radius = val);
+                      await fetchLocations();
+                    },
+                    menuBar: SizedBox.shrink(),
+                    searchBox: TypeAheadField<Map<String, dynamic>>(
+                      builder: (context, controller, focusNode) {
+                        return Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 32,
+                            vertical: 12,
                           ),
-                        ),
-                      );
-                    },
-                    suggestionsCallback: (pattern) async {
-                      if (_debounce?.isActive ?? false) _debounce!.cancel();
-                      final completer = Completer<List<Map<String, dynamic>>>();
-                      _debounce = Timer(
-                        const Duration(milliseconds: 500),
-                        () async {
-                          if (pattern.trim().isEmpty) {
-                            completer.complete([]);
-                            return;
-                          }
-                          final url = Uri.parse(
-                            'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
-                          );
-                          final headers = {'User-Agent': 'WaterWise/1.0'};
-                          final response = await http.get(
-                            url,
-                            headers: headers,
-                          );
-                          if (response.statusCode == 200) {
-                            final List data = jsonDecode(response.body);
-                            completer.complete(
-                              data.cast<Map<String, dynamic>>(),
+                          child: TextField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Search city, state, country, ZIP, etc.',
+                              prefixIcon: Icon(Icons.search),
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 12,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                          ),
+                        );
+                      },
+                      suggestionsCallback: (pattern) async {
+                        if (_debounce?.isActive ?? false) _debounce!.cancel();
+                        final completer =
+                            Completer<List<Map<String, dynamic>>>();
+                        _debounce = Timer(
+                          const Duration(milliseconds: 500),
+                          () async {
+                            if (pattern.trim().isEmpty) {
+                              completer.complete([]);
+                              return;
+                            }
+                            final url = Uri.parse(
+                              'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
                             );
-                            return;
-                          }
-                          completer.complete([]);
-                        },
-                      );
-                      return completer.future;
-                    },
-                    itemBuilder: (context, suggestion) {
-                      final display = suggestion['display_name'] ?? '';
-                      return ListTile(title: Text(display));
-                    },
-                    onSelected: (suggestion) {
-                      _searchController.text = suggestion['display_name'] ?? '';
-                      final lat = double.tryParse(suggestion['lat'] ?? '');
-                      final lon = double.tryParse(suggestion['lon'] ?? '');
-                      if (lat != null && lon != null) {
-                        setState(() {
-                          _currentPosition = LatLng(lat, lon);
-                          _newPosition = LatLng(lat, lon);
-                        });
-                        fetchLocations();
-                      }
-                    },
-                    emptyBuilder: (context) {
-                      if (_searchController.text.trim().isEmpty) {
-                        return SizedBox.shrink();
-                      }
-                      return const ListTile(title: Text('No items found!'));
-                    },
-                  ),
-                  onMyLocationPressed: () async {
-                    LocationPermission permission =
-                        await Geolocator.checkPermission();
-                    if (permission == LocationPermission.denied ||
-                        permission == LocationPermission.deniedForever) {
-                      permission = await Geolocator.requestPermission();
+                            final headers = {'User-Agent': 'WaterWise/1.0'};
+                            final response = await http.get(
+                              url,
+                              headers: headers,
+                            );
+                            if (response.statusCode == 200) {
+                              final List data = jsonDecode(response.body);
+                              completer.complete(
+                                data.cast<Map<String, dynamic>>(),
+                              );
+                              return;
+                            }
+                            completer.complete([]);
+                          },
+                        );
+                        return completer.future;
+                      },
+                      itemBuilder: (context, suggestion) {
+                        final display = suggestion['display_name'] ?? '';
+                        return ListTile(title: Text(display));
+                      },
+                      onSelected: (suggestion) {
+                        _searchController.text =
+                            suggestion['display_name'] ?? '';
+                        final lat = double.tryParse(suggestion['lat'] ?? '');
+                        final lon = double.tryParse(suggestion['lon'] ?? '');
+                        if (lat != null && lon != null) {
+                          setState(() {
+                            _currentPosition = LatLng(lat, lon);
+                            _newPosition = LatLng(lat, lon);
+                          });
+                          fetchLocations();
+                        }
+                      },
+                      emptyBuilder: (context) {
+                        if (_searchController.text.trim().isEmpty) {
+                          return SizedBox.shrink();
+                        }
+                        return const ListTile(title: Text('No items found!'));
+                      },
+                    ),
+                    onMyLocationPressed: () async {
+                      LocationPermission permission =
+                          await Geolocator.checkPermission();
                       if (permission == LocationPermission.denied ||
                           permission == LocationPermission.deniedForever) {
-                        return;
+                        permission = await Geolocator.requestPermission();
+                        if (permission == LocationPermission.denied ||
+                            permission == LocationPermission.deniedForever) {
+                          return;
+                        }
                       }
-                    }
-                    final LocationSettings locationSettings = LocationSettings(
-                      accuracy: LocationAccuracy.high,
-                    );
-                    Position position = await Geolocator.getCurrentPosition(
-                      locationSettings: locationSettings,
-                    );
-                    final userLatLng = LatLng(
-                      position.latitude,
-                      position.longitude,
-                    );
-                    setState(() {
-                      _currentPosition = userLatLng;
-                      _newPosition = userLatLng;
-                    });
-                    await fetchLocations();
-                    setState(() {});
-                  },
-                  onRefreshPressed: fetchLocations,
-                  filterRow: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24),
-                    child: Container(
-                      height: 36,
-                      width: 400,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black26,
-                            blurRadius: 8,
-                            offset: Offset(0, 0),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 0,
+                      final LocationSettings locationSettings =
+                          LocationSettings(accuracy: LocationAccuracy.high);
+                      Position position = await Geolocator.getCurrentPosition(
+                        locationSettings: locationSettings,
+                      );
+                      final userLatLng = LatLng(
+                        position.latitude,
+                        position.longitude,
+                      );
+                      setState(() {
+                        _currentPosition = userLatLng;
+                        _newPosition = userLatLng;
+                      });
+                      await fetchLocations();
+                      setState(() {});
+                    },
+                    onRefreshPressed: fetchLocations,
+                    filterRow: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: Row(
                           children: [
+                            Icon(
+                              Icons.filter_list,
+                              color: Colors.teal,
+                              size: 20,
+                            ),
+                            SizedBox(width: 8),
                             Flexible(
                               child: Text(
-                                'Choose contaminant:',
+                                'Filter by contaminant:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
                               ),
@@ -893,14 +1128,52 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
                         ),
                       ),
                     ),
+                    showSidebar: _showSidebar,
+                    showInfoPanel: _showInfoPanel,
                   ),
-                  showSidebar: _showSidebar,
-                ),
                 if (loading)
                   Positioned.fill(
                     child: Container(
-                      color: Colors.black45,
-                      child: Center(child: CircularProgressIndicator()),
+                      color: Colors.black54,
+                      child: Center(
+                        child: Card(
+                          elevation: 8,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.teal,
+                                  ),
+                                  strokeWidth: 3,
+                                ),
+                                const SizedBox(height: 20),
+                                Text(
+                                  'Loading water quality data...',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Fetching contaminant information',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
               ],
@@ -908,181 +1181,183 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
           : SafeArea(
               child: Column(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TypeAheadField<Map<String, dynamic>>(
-                                builder: (context, controller, focusNode) =>
-                                    TextField(
-                                      controller: controller,
-                                      focusNode: focusNode,
-                                      decoration: InputDecoration(
-                                        hintText:
-                                            'Search city, state, country, zip, etc.',
-                                        prefixIcon: Icon(Icons.search),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
+                  if (!(_showSidebar && _selectedLocation != null))
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TypeAheadField<Map<String, dynamic>>(
+                                  builder: (context, controller, focusNode) =>
+                                      TextField(
+                                        controller: controller,
+                                        focusNode: focusNode,
+                                        decoration: InputDecoration(
+                                          hintText:
+                                              'Search city, state, country, zip, etc.',
+                                          prefixIcon: Icon(Icons.search),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                suggestionsCallback: (pattern) async {
-                                  if (_debounce?.isActive ?? false) {
-                                    _debounce!.cancel();
-                                  }
-                                  final completer =
-                                      Completer<List<Map<String, dynamic>>>();
-                                  _debounce = Timer(
-                                    const Duration(milliseconds: 500),
-                                    () async {
-                                      if (pattern.trim().isEmpty) {
+                                  suggestionsCallback: (pattern) async {
+                                    if (_debounce?.isActive ?? false) {
+                                      _debounce!.cancel();
+                                    }
+                                    final completer =
+                                        Completer<List<Map<String, dynamic>>>();
+                                    _debounce = Timer(
+                                      const Duration(milliseconds: 500),
+                                      () async {
+                                        if (pattern.trim().isEmpty) {
+                                          completer.complete([]);
+                                          return;
+                                        }
+                                        final url = Uri.parse(
+                                          'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
+                                        );
+                                        final response = await http.get(url);
+                                        if (response.statusCode == 200) {
+                                          final List data = jsonDecode(
+                                            response.body,
+                                          );
+                                          completer.complete(
+                                            data.cast<Map<String, dynamic>>(),
+                                          );
+                                          return;
+                                        }
                                         completer.complete([]);
-                                        return;
-                                      }
-                                      final url = Uri.parse(
-                                        'https://nominatim.openstreetmap.org/search?format=json&q=${Uri.encodeComponent(pattern)}&countrycodes=us&limit=10',
-                                      );
-                                      final response = await http.get(url);
-                                      if (response.statusCode == 200) {
-                                        final List data = jsonDecode(
-                                          response.body,
-                                        );
-                                        completer.complete(
-                                          data.cast<Map<String, dynamic>>(),
-                                        );
-                                        return;
-                                      }
-                                      completer.complete([]);
-                                    },
-                                  );
-                                  return completer.future;
-                                },
-                                itemBuilder: (context, suggestion) {
-                                  final display =
-                                      suggestion['display_name'] ?? '';
-                                  return ListTile(title: Text(display));
-                                },
-                                onSelected: (suggestion) {
-                                  _searchController.text =
-                                      suggestion['display_name'] ?? '';
-                                  final lat = double.tryParse(
-                                    suggestion['lat'] ?? '',
-                                  );
-                                  final lon = double.tryParse(
-                                    suggestion['lon'] ?? '',
-                                  );
-                                  if (lat != null && lon != null) {
-                                    setState(() {
-                                      _currentPosition = LatLng(lat, lon);
-                                      _newPosition = LatLng(lat, lon);
-                                    });
-                                    fetchLocations();
-                                  }
-                                },
-                                emptyBuilder: (context) {
-                                  if (_searchController.text.trim().isEmpty) {
-                                    return SizedBox.shrink();
-                                  }
-                                  return const ListTile(
-                                    title: Text('No items found!'),
-                                  );
-                                },
+                                      },
+                                    );
+                                    return completer.future;
+                                  },
+                                  itemBuilder: (context, suggestion) {
+                                    final display =
+                                        suggestion['display_name'] ?? '';
+                                    return ListTile(title: Text(display));
+                                  },
+                                  onSelected: (suggestion) {
+                                    _searchController.text =
+                                        suggestion['display_name'] ?? '';
+                                    final lat = double.tryParse(
+                                      suggestion['lat'] ?? '',
+                                    );
+                                    final lon = double.tryParse(
+                                      suggestion['lon'] ?? '',
+                                    );
+                                    if (lat != null && lon != null) {
+                                      setState(() {
+                                        _currentPosition = LatLng(lat, lon);
+                                        _newPosition = LatLng(lat, lon);
+                                      });
+                                      fetchLocations();
+                                    }
+                                  },
+                                  emptyBuilder: (context) {
+                                    if (_searchController.text.trim().isEmpty) {
+                                      return SizedBox.shrink();
+                                    }
+                                    return const ListTile(
+                                      title: Text('No items found!'),
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-                            SizedBox(width: 8),
-                            ElevatedButton(
-                              onPressed: () async {
-                                LocationPermission permission =
-                                    await Geolocator.checkPermission();
-                                if (permission == LocationPermission.denied ||
-                                    permission ==
-                                        LocationPermission.deniedForever) {
-                                  permission =
-                                      await Geolocator.requestPermission();
+                              SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  LocationPermission permission =
+                                      await Geolocator.checkPermission();
                                   if (permission == LocationPermission.denied ||
                                       permission ==
                                           LocationPermission.deniedForever) {
-                                    return;
+                                    permission =
+                                        await Geolocator.requestPermission();
+                                    if (permission ==
+                                            LocationPermission.denied ||
+                                        permission ==
+                                            LocationPermission.deniedForever) {
+                                      return;
+                                    }
                                   }
-                                }
-                                final LocationSettings locationSettings =
-                                    LocationSettings(
-                                      accuracy: LocationAccuracy.high,
-                                    );
-                                Position position =
-                                    await Geolocator.getCurrentPosition(
-                                      locationSettings: locationSettings,
-                                    );
-                                final userLatLng = LatLng(
-                                  position.latitude,
-                                  position.longitude,
-                                );
-                                setState(() {
-                                  _currentPosition = userLatLng;
-                                  _newPosition = userLatLng;
-                                });
-                                await fetchLocations();
-                                setState(() {});
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  final LocationSettings locationSettings =
+                                      LocationSettings(
+                                        accuracy: LocationAccuracy.high,
+                                      );
+                                  Position position =
+                                      await Geolocator.getCurrentPosition(
+                                        locationSettings: locationSettings,
+                                      );
+                                  final userLatLng = LatLng(
+                                    position.latitude,
+                                    position.longitude,
+                                  );
+                                  setState(() {
+                                    _currentPosition = userLatLng;
+                                    _newPosition = userLatLng;
+                                  });
+                                  await fetchLocations();
+                                  setState(() {});
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 16,
+                                  ),
                                 ),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.my_location),
+                                    SizedBox(width: 4),
+                                    Text('My Location'),
+                                  ],
                                 ),
                               ),
-                              child: Row(
-                                children: [
-                                  Icon(Icons.my_location),
-                                  SizedBox(width: 4),
-                                  Text('My Location'),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        ElevatedButton(
-                          onPressed: fetchLocations,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
+                            ],
                           ),
-                          child: Text('Refresh Water Data Nearby'),
-                        ),
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                'Choose contaminant:',
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
+                          SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: fetchLocations,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.teal,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
                               ),
                             ),
-                            SizedBox(width: 8),
-                            Expanded(child: buildMenuBar()),
-                          ],
-                        ),
-                      ],
+                            child: Text('Refresh Water Data Nearby'),
+                          ),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Choose contaminant:',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Expanded(child: buildMenuBar()),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                   if (loading)
                     Expanded(child: Center(child: CircularProgressIndicator()))
                   else

@@ -13,6 +13,7 @@ class SearchFilterPanel extends StatelessWidget {
   final VoidCallback onRefreshPressed;
   final Widget filterRow;
   final bool showSidebar;
+  final bool showInfoPanel;
 
   const SearchFilterPanel({
     super.key,
@@ -25,6 +26,7 @@ class SearchFilterPanel extends StatelessWidget {
     required this.onRefreshPressed,
     required this.filterRow,
     required this.showSidebar,
+    this.showInfoPanel = false,
   });
 
   @override
@@ -40,14 +42,16 @@ class SearchFilterPanel extends StatelessWidget {
           screenWidth - 80.0,
         );
 
+    final leftInset = showInfoPanel ? 350.0 : 0.0;
+
     return Positioned(
       top: 0,
-      left: 0,
+      left: leftInset,
       right: rightInset,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           minWidth: 280.0,
-          maxWidth: min(900.0, screenWidth - rightInset - 16.0),
+          maxWidth: min(900.0, screenWidth - leftInset - rightInset - 16.0),
         ),
         child: Container(
           color: Colors.white.withValues(alpha: 0.95),
