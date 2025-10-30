@@ -178,12 +178,22 @@ class WaterQualityHomePageState extends State<WaterQualityHomePage> {
     await fetchLocations();
   }
 
+  Future<void> startFetchingOnAppLoad() async {
+    // if we've already fetched or are currently loading, don't start again
+    if (loading) return;
+    // If current position already set, still call fetchLocations to refresh
+    if (_currentPosition != null) {
+      await fetchLocations();
+      return;
+    }
+    await _getCurrentLocation();
+  }
+
   Future<void> fetchLocations() async {
     final target = _newPosition ?? _currentPosition;
     if (target == null) return;
     setState(() => loading = true);
 
-    // Fetch all contaminant types (update as needed)
     await WaterDataService.fetchAll(
       latitude: target.latitude,
       longitude: target.longitude,

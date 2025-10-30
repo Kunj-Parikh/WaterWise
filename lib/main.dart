@@ -15,6 +15,18 @@ class WaterWiseApp extends StatefulWidget {
 
 class _WaterWiseAppState extends State<WaterWiseApp> {
   bool _showWelcome = true;
+  // Key to access the home page state so we can trigger early fetching
+  final GlobalKey<WaterQualityHomePageState> _homeKey =
+      GlobalKey<WaterQualityHomePageState>();
+
+  @override
+  void initState() {
+    super.initState();
+    // After the first frame, ask the home screen state to start fetching.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _homeKey.currentState?.startFetchingOnAppLoad();
+    });
+  }
 
   void _closeWelcome() {
     setState(() {
@@ -37,7 +49,8 @@ class _WaterWiseAppState extends State<WaterWiseApp> {
         body: Stack(
           alignment: Alignment.center,
           children: [
-            const WaterQualityHomePage(),
+            // GlobalKey for early fetch
+            WaterQualityHomePage(key: _homeKey),
 
             if (_showWelcome)
               Positioned.fill(
